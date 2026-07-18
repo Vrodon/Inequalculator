@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 
 /** Coach-mark steps, in order. Each points at an element tagged `data-tour`. */
-export const ONBOARDING_STEPS = ['country', 'rates', 'year', 'gini', 'tax'] as const;
+export const ONBOARDING_STEPS = ['country', 'year', 'gini', 'rates', 'tax'] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
 /**
