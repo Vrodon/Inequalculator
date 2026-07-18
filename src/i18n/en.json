@@ -1,0 +1,171 @@
+{
+  "app": {
+    "title": "Inequalculator",
+    "tagline": "How asset returns above the growth of the economy shape wealth over time",
+    "intro": "The economy grows for everyone — but assets tend to compound faster than wages. Explore who ends up owning the growth.",
+    "rgLine": "This is the mechanism economists call r > g: when the return on assets (r) outpaces the growth of the overall economy (g), wealth concentrates."
+  },
+  "header": {
+    "about": "About & sources",
+    "openAbout": "Open sources and assumptions",
+    "theme": "Toggle light / dark theme",
+    "themeToDark": "Switch to dark theme",
+    "themeToLight": "Switch to light theme"
+  },
+  "view": {
+    "label": "Detail level",
+    "simple": "Simple",
+    "advanced": "Advanced",
+    "advancedOpen": "Advanced settings",
+    "advancedClose": "Close advanced settings"
+  },
+  "country": {
+    "label": "Country",
+    "help": "Load real-world starting figures for each country. Every number shows its source. Editing a core slider switches to Custom."
+  },
+  "presets": {
+    "US": { "name": "United States" },
+    "UK": { "name": "United Kingdom" },
+    "DE": { "name": "Germany" },
+    "custom": { "name": "Custom" }
+  },
+  "controls": {
+    "assetReturn": "Asset return (r)",
+    "assetReturnHelp": "The real, inflation-adjusted return the top group earns on its assets each year. Historically, broad stock markets have returned roughly 5–7% real over the long run.",
+    "economyGrowth": "Economy growth (g)",
+    "economyGrowthHelp": "The real growth rate of the wider economy each year — the return applied to everyone else. This moves the tail end of the line up or down.",
+    "year": "Year",
+    "yearHelp": "Scrub through time, or press play to watch wealth compound from year 0 to the horizon.",
+    "play": "Play",
+    "pause": "Pause",
+    "playAria": "Play the animation from year 0 to the end",
+    "pauseAria": "Pause the animation",
+    "reset": "Reset to preset",
+    "resetAria": "Reset all values to the selected country preset",
+    "yearOf": "Year {{year}} of {{total}}"
+  },
+  "units": {
+    "percent": "{{value}}%",
+    "perYear": "%/yr",
+    "times": "{{value}}×",
+    "years_one": "{{count}} year",
+    "years_other": "{{count}} years"
+  },
+  "stats": {
+    "topShare": "Top {{pct}}% wealth share",
+    "topShareSub": "Share of all wealth owned by the top group",
+    "topShareFromTo": "from {{start}} at year 0",
+    "economySize": "Economy size",
+    "economySizeSub": "Total wealth vs year 0",
+    "perCapita": "Wealth per person",
+    "perCapitaSub": "Top group vs everyone else",
+    "perCapitaValue": "{{value}}× more",
+    "gini": "Wealth Gini",
+    "giniSub": "0 = everyone equal · 1 = one owner",
+    "biggerLabel": "× bigger"
+  },
+  "readout": {
+    "start": "At the start, the top {{top}}% owns {{share}} of all wealth.",
+    "main": "Everyone is {{multiple}} richer than year 0 — but the top {{top}}% now owns {{share}} of all wealth.",
+    "note": "Both groups are richer in absolute terms. What changes is who owns the growth."
+  },
+  "legend": {
+    "top": "Top {{pct}}%",
+    "bottom": "Everyone else",
+    "topLong": "Top {{pct}}% of the population",
+    "bottomLong": "The other {{pct}}%"
+  },
+  "pie": {
+    "title": "Who owns the wealth",
+    "caption": "Economy {{multiple}} larger than year 0",
+    "captionStart": "Total wealth at year 0",
+    "year0Ring": "Dashed ring = size of the economy at year 0",
+    "a11y": "Donut chart. At year {{year}}, total wealth is {{multiple}} its year-0 size. The top {{top}}% owns {{topShare}} and everyone else owns {{bottomShare}}."
+  },
+  "divergence": {
+    "title": "Top group's wealth share over time",
+    "refLine": "50%",
+    "yAxis": "Top share",
+    "xAxis": "Year",
+    "a11y": "Line chart of the top {{top}}%'s share of total wealth from year 0 to year {{years}}. It starts at {{start}} and reaches {{end}} at the selected year {{year}}.",
+    "scrubHint": "Tap or drag on the chart to change the year"
+  },
+  "change": {
+    "title": "What could change this?",
+    "subtitle": "Add an annual wealth tax on the top group and watch the curve bend.",
+    "wealthTax": "Wealth tax on the top group",
+    "wealthTaxHelp": "A tax charged each year on the top group's wealth and redistributed to everyone else. Whether such a tax works in practice is debated — see the notes.",
+    "off": "off",
+    "caveatLink": "Read the caveats on wealth taxes"
+  },
+  "advanced": {
+    "title": "Advanced settings",
+    "subtitle": "More factors, for exploring the mechanism in detail.",
+    "startingDistribution": "Starting distribution",
+    "startingDistributionHelp": "The top group's share of total wealth at year 0.",
+    "extraSaving": "Extra saving (top group)",
+    "extraSavingHelp": "Added to the top group's yearly growth — a proxy for higher reinvestment of returns rather than spending them.",
+    "wealthTax": "Wealth tax (fine control)",
+    "timeHorizon": "Time horizon",
+    "timeHorizonHelp": "How many years to project forward.",
+    "done": "Done"
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "next": "Next",
+    "back": "Back",
+    "done": "Got it",
+    "stepOf": "{{current}} of {{total}}",
+    "country": {
+      "title": "Pick a country",
+      "body": "Load real starting figures for the US, UK or Germany — or build your own with Custom."
+    },
+    "rates": {
+      "title": "Move the two rates",
+      "body": "Asset return (r) is what the top group earns; economy growth (g) is everyone else. When r beats g, wealth concentrates."
+    },
+    "year": {
+      "title": "Travel through time",
+      "body": "Drag the year, or press play, to watch the effect compound over decades."
+    }
+  },
+  "info": {
+    "title": "Sources & assumptions",
+    "tabs": {
+      "sources": "Sources & assumptions",
+      "howToRead": "How to read this"
+    },
+    "modelHeading": "What this model is",
+    "modelBody": "Inequalculator is a stylized two-group compounding model. It splits the population into a top group (by default the top 10%) and everyone else, and compounds each group's wealth forward one year at a time using real, inflation-adjusted returns. The top group earns the asset return (r); everyone else grows with the economy (g). It is an illustration of one mechanism — it is not a forecast of any country's future.",
+    "rgHeading": "r > g, in plain language",
+    "rgBody": "If the money you already own grows faster than the wages and output of the economy as a whole, then — all else equal — the people who own the most assets capture a growing share of total wealth over time. Thomas Piketty summarized this as r > g: the return on capital (r) exceeding the growth rate of the economy (g).",
+    "realReturnsNote": "All returns in this tool are real (inflation-adjusted), so the growth you see is on top of inflation.",
+    "sourcesHeading": "Where the numbers come from",
+    "sourceNoteLabel": "Note",
+    "leavesOutHeading": "What the model leaves out",
+    "leavesOut": {
+      "twoGroup": "The bottom group also owns assets — homes and pensions in particular — so a clean two-group split with a single return for each side is a simplification.",
+      "mobility": "People move between groups over their lives, and new fortunes enter the top, which a fixed two-group model does not capture.",
+      "empirical": "Empirically, top wealth shares have risen sharply in the United States but have been comparatively flatter in the UK and Germany.",
+      "housing": "A prominent academic view (Matthew Rognlie) attributes much of the rising capital share specifically to housing, rather than to financial capital broadly.",
+      "wealthTax": "The effectiveness of a wealth tax is debated: valuation is hard, avoidance and capital flight are real, and estimates of the revenue it raises vary widely."
+    },
+    "twoSidedNote": "You can test all of this yourself by moving r, g and the wealth-tax lever and comparing countries.",
+    "disclaimer": "An illustration of one mechanism, not a forecast or financial advice.",
+    "pikettyLabel": "Conceptual basis",
+    "close": "Close"
+  },
+  "footer": {
+    "disclaimer": "A stylized model using real (inflation-adjusted) returns. An illustration of one mechanism — not a forecast or financial advice.",
+    "sources": "Sources & assumptions",
+    "code": "View source on GitHub",
+    "builtWith": "All figures are illustrative anchors; each shows its source."
+  },
+  "common": {
+    "source": "Source",
+    "note": "Note",
+    "learnMore": "Learn more",
+    "close": "Close",
+    "openInNewTab": "opens in a new tab"
+  }
+}

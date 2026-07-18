@@ -1,0 +1,155 @@
+import { useLayoutEffect, useState, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, useReducedMotion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+import { useOnboarding } from '../state/useOnboarding';
+
+interface Box {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * First-visit coach-marks. Spotlights the country switch, the rate sliders and
+ * the year scrubber in turn (each tagged with `data-tour`), with a short
+ * explanation and a subtle pulsing ring. Shown once, then never again.
+ */
+export function Onboarding() {
+  const { t } = useTranslation();
+  const prefersReduced = useReducedMotion();
+  const { active, step, stepId, total, next, back, skip } = useOnboarding();
+  const [box, setBox] = useState<Box | null>(null);
+
+  useLayoutEffect(() => {
+    if (!active) return;
+
+    const measure = () => {
+      const el = document.querySelector<HTMLElement>(`[data-tour="${stepId}"]`);
+      if (!el) {
+        setBox(null);
+        return;
+      }
+      const r = el.getBoundingClientRect();
+      setBox({ top: r.top, left: r.left, width: r.width, height: r.height });
+    };
+
+    const el = document.querySelector<HTMLElement>(`[data-tour="${stepId}"]`);
+    if (el) el.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'center' });
+
+    const timer = window.setTimeout(measure, prefersReduced ? 0 : 280);
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, [active, stepId, prefersReduced]);
+
+  if (!active) return null;
+
+  const copy = {
+    title: t(`onboarding.${stepId}.title`),
+    body: t(`onboarding.${stepId}.body`),
+  };
+
+  const PAD = 8;
+  const spot = box
+    ? {
+        top: box.top - PAD,
+        left: box.left - PAD,
+        width: box.width + PAD * 2,
+        height: box.height + PAD * 2,
+      }
+    : null;
+
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const cardW = Math.min(340, vw - 24);
+  let cardStyle: CSSProperties;
+  if (spot) {
+    const center = spot.left + spot.width / 2;
+    const left = Math.min(Math.max(center - cardW / 2, 12), vw - cardW - 12);
+    const below = spot.top + spot.height < vh * 0.62;
+    cardStyle = below
+      ? { width: cardW, top: spot.top + spot.height + 12, left }
+      : { width: cardW, top: spot.top - 12, left, transform: 'translateY(-100%)' };
+  } else {
+    cardStyle = { width: cardW, left: (vw - cardW) / 2, top: vh * 0.4 };
+  }
+
+  const isLast = step + 1 >= total;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[95]" role="dialog" aria-modal="true" aria-label={copy.title}>
+      {/* backdrop; clicking anywhere outside the card advances */}
+      <div className="absolute inset-0" onClick={next} />
+
+      {spot && (
+        <>
+          <div
+            className="pointer-events-none absolute rounded-2xl"
+            style={{
+              top: spot.top,
+              left: spot.left,
+              width: spot.width,
+              height: spot.height,
+              boxShadow: '0 0 0 9999px rgb(0 0 0 / 0.62)',
+            }}
+          />
+          <motion.div
+            className="pointer-events-none absolute rounded-2xl ring-2 ring-accent"
+            style={{ top: spot.top, left: spot.left, width: spot.width, height: spot.height }}
+            animate={prefersReduced ? undefined : { opacity: [0.45, 1, 0.45] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        </>
+      )}
+
+      <motion.div
+        className="card absolute p-4 shadow-pop"
+        style={cardStyle}
+        initial={prefersReduced ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="tnum text-xs font-semibold text-accent">
+          {t('onboarding.stepOf', { current: step + 1, total })}
+        </p>
+        <h3 className="mt-1 text-base font-semibold text-text">{copy.title}</h3>
+        <p className="mt-1 text-sm leading-relaxed text-muted">{copy.body}</p>
+        <div className="mt-4 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={skip}
+            className="text-sm font-medium text-muted transition hover:text-text"
+          >
+            {t('onboarding.skip')}
+          </button>
+          <div className="flex items-center gap-2">
+            {step > 0 && (
+              <button
+                type="button"
+                onClick={back}
+                className="rounded-full border border-line px-3 py-1.5 text-sm font-medium text-muted transition hover:bg-surface-2 hover:text-text"
+              >
+                {t('onboarding.back')}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={next}
+              className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-bg transition hover:brightness-110"
+            >
+              {isLast ? t('onboarding.done') : t('onboarding.next')}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>,
+    document.body,
+  );
+}
