@@ -61,9 +61,13 @@ export function StatCards() {
   return (
     <div className="space-y-3">
       <div className="card border-accent/30 bg-accent/[0.06] p-4">
-        <p className="text-[15px] font-medium leading-snug text-text">{readout}</p>
-        {selectedYear > 0 && (
-          <p className="mt-1.5 text-xs leading-relaxed text-muted">{note}</p>
+        {selectedYear === 0 ? (
+          <p className="text-[15px] font-medium leading-snug text-text">{readout}</p>
+        ) : (
+          <>
+            <p className="text-[15px] font-medium leading-snug text-text">{note}</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-muted">{readout}</p>
+          </>
         )}
       </div>
 
