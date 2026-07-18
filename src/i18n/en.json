@@ -80,6 +80,7 @@
     "caption": "Economy {{multiple}} larger than year 0",
     "captionStart": "Total wealth at year 0",
     "growthHint": "Each slice: share of total · ×growth since year 0",
+    "ghostHint": "Faint center ring: the year-0 split, for comparison",
     "a11y": "Donut chart. At year {{year}}, total wealth is {{multiple}} its year-0 size. The top 1% owns {{top1}} and is now {{top1x}} its year-0 wealth; the next 9% owns {{next9}} ({{next9x}}); the middle 40% {{middle40}} ({{middle40x}}); and the bottom 50% {{bottom50}} ({{bottom50x}})."
   },
   "divergence": {

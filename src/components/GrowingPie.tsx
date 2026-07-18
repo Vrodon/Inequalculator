@@ -127,7 +127,7 @@ function Slice({
 export function GrowingPie() {
   const { t } = useTranslation();
   const prefersReduced = useReducedMotion();
-  const { result, stats, selectedYear } = useSimulation();
+  const { result, stats, startStats, selectedYear } = useSimulation();
 
   const idx = Math.min(selectedYear, result.series.length - 1);
   const point = result.series[idx];
@@ -155,6 +155,27 @@ export function GrowingPie() {
   // 0 every multiple is ×1), so they appear from year 1 onward.
   const showSub = selectedYear > 0;
 
+  // The year-0 "ghost": a faint inner donut fixed at the original size and shares,
+  // so the grown outer donut can be read against where it started (both the size
+  // and the split). It stays put while the outer donut animates.
+  const GHOST_OUTER = BASE_R;
+  const GHOST_INNER = BASE_R * INNER_RATIO;
+  let ghostAcc = 0;
+  const ghostSlices = startStats.groups.map((g) => {
+    const start = ghostAcc;
+    ghostAcc += g.share;
+    return {
+      key: g.key as GroupKey,
+      d:
+        arcGen({
+          innerRadius: GHOST_INNER,
+          outerRadius: GHOST_OUTER,
+          startAngle: TAU * start,
+          endAngle: TAU * ghostAcc,
+        }) ?? '',
+    };
+  });
+
   const shareByKey = (k: GroupKey) => groups.find((g) => g.key === k)?.share ?? 0;
   const multByKey = (k: GroupKey) => groups.find((g) => g.key === k)?.growthMultiple ?? 1;
   const a11y = t('pie.a11y', {
@@ -180,6 +201,10 @@ export function GrowingPie() {
         <svg viewBox={`0 0 ${VIEW} ${VIEW}`} role="img" aria-label={a11y} className="h-auto w-full">
           <title>{a11y}</title>
           <g transform={`translate(${CENTER}, ${CENTER})`}>
+            {showSub &&
+              ghostSlices.map((s) => (
+                <path key={`ghost-${s.key}`} d={s.d} fill={groupFill(s.key)} fillOpacity={0.4} />
+              ))}
             <circle
               r={BASE_R}
               fill="none"
@@ -221,7 +246,12 @@ export function GrowingPie() {
           ? t('pie.captionStart')
           : t('pie.caption', { multiple: formatMultiple(stats.economyMultiple) })}
       </p>
-      {showSub && <p className="mb-3 text-center text-xs text-faint">{t('pie.growthHint')}</p>}
+      {showSub && (
+        <>
+          <p className="mb-1 text-center text-xs text-faint">{t('pie.growthHint')}</p>
+          <p className="mb-3 text-center text-xs text-faint">{t('pie.ghostHint')}</p>
+        </>
+      )}
 
       <GroupLegend
         groups={groups.map((g) => ({
