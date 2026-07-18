@@ -66,7 +66,8 @@ export function Onboarding() {
           transition={{ duration: 0.22 }}
         >
           <h2 className="text-lg font-bold leading-snug text-text">{t('onboarding.welcome.title')}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted">{t('onboarding.welcome.body')}</p>
+          <p className="mt-1 text-sm font-medium text-muted">{t('onboarding.welcome.subtitle')}</p>
+          <p className="mt-3 text-sm leading-relaxed text-muted">{t('onboarding.welcome.body')}</p>
           <div className="mt-5 flex flex-col gap-2">
             <button
               type="button"

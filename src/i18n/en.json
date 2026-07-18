@@ -174,7 +174,8 @@
     "done": "Got it",
     "stepOf": "{{current}} of {{total}}",
     "welcome": {
-      "title": "Who owns the growth?",
+      "title": "How the rich get richer",
+      "subtitle": "The economy of wealth",
       "body": "Everyone gets richer as the economy grows — but assets compound faster than wages, so the top takes an ever-bigger slice and everyone else's shrinks. See it happen, then test what could change it.",
       "start": "Take a quick tour",
       "dismiss": "I'll explore myself"
