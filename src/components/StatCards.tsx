@@ -81,7 +81,7 @@ export function StatCards() {
         <StatTile title={t('stats.economySize')} sub={t('stats.economySizeSub')}>
           <CountUp value={stats.economyMultiple} format={formatMultiple} />
         </StatTile>
-        <StatTile title={t('stats.gini')} sub={t('stats.giniSub')}>
+        <StatTile title={t('stats.gini')} sub={t('stats.giniSub')} tourId="gini">
           <CountUp value={stats.gini} format={formatGini} />
         </StatTile>
 
@@ -105,16 +105,18 @@ function StatTile({
   sub,
   accent = false,
   tone,
+  tourId,
   children,
 }: {
   title: string;
   sub: string;
   accent?: boolean;
   tone?: 'cool';
+  tourId?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="card flex flex-col justify-between gap-2 p-4">
+    <div data-tour={tourId} className="card flex flex-col justify-between gap-2 p-4">
       <p className="text-xs font-medium leading-tight text-muted">{title}</p>
       <div>
         <div

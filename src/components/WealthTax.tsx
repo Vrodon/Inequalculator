@@ -62,7 +62,7 @@ export function WealthTax({ onOpenCaveats }: { onOpenCaveats: () => void }) {
     .join(' · ');
 
   return (
-    <section className="card overflow-hidden">
+    <section data-tour="tax" className="card overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

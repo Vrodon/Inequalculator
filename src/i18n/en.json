@@ -172,6 +172,12 @@
     "back": "Back",
     "done": "Got it",
     "stepOf": "{{current}} of {{total}}",
+    "welcome": {
+      "title": "Who owns the growth?",
+      "body": "Everyone gets richer as the economy grows — but assets compound faster than wages, so the top takes an ever-bigger slice and everyone else's shrinks. See it happen, then test what could change it.",
+      "start": "Take a quick tour",
+      "dismiss": "I'll explore myself"
+    },
     "country": {
       "title": "Pick a country",
       "body": "Load real starting figures for the US, UK or Germany — or build your own with Custom."
@@ -183,6 +189,14 @@
     "year": {
       "title": "Travel through time",
       "body": "Drag the year, or press play, to watch the effect compound over decades."
+    },
+    "gini": {
+      "title": "One number for the gap",
+      "body": "Gini boils inequality down to a single score: 0 is perfect equality, 1 is one household owning everything. Watch it rise as wealth concentrates."
+    },
+    "tax": {
+      "title": "Try changing the outcome",
+      "body": "This is where you push back. Add a wealth tax — flat, threshold, or progressive — pick a real design, and watch it redraw the shares."
     }
   },
   "info": {

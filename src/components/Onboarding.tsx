@@ -12,18 +12,20 @@ interface Box {
 }
 
 /**
- * First-visit coach-marks. Spotlights the country switch, the rate sliders and
- * the year scrubber in turn (each tagged with `data-tour`), with a short
- * explanation and a subtle pulsing ring. Shown once, then never again.
+ * First-visit onboarding. Opens with a centered welcome modal (why the site
+ * exists + a "take a tour?" choice); the tour then spotlights the country
+ * switch, rate sliders, year scrubber, the Gini tile and the wealth-tax panel
+ * in turn (each tagged with `data-tour`). Shown once, then never again.
  */
 export function Onboarding() {
   const { t } = useTranslation();
   const prefersReduced = useReducedMotion();
-  const { active, step, stepId, total, next, back, skip } = useOnboarding();
+  const { showWelcome, showTour, step, stepId, total, startTour, dismiss, next, back, skip } =
+    useOnboarding();
   const [box, setBox] = useState<Box | null>(null);
 
   useLayoutEffect(() => {
-    if (!active) return;
+    if (!showTour) return;
 
     const measure = () => {
       const el = document.querySelector<HTMLElement>(`[data-tour="${stepId}"]`);
@@ -46,9 +48,48 @@ export function Onboarding() {
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', measure, true);
     };
-  }, [active, stepId, prefersReduced]);
+  }, [showTour, stepId, prefersReduced]);
 
-  if (!active) return null;
+  if (showWelcome) {
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[95] flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('onboarding.welcome.title')}
+      >
+        <div className="absolute inset-0 bg-black/60" onClick={dismiss} />
+        <motion.div
+          className="card relative z-10 w-full max-w-sm p-6 shadow-pop"
+          initial={prefersReduced ? false : { opacity: 0, y: 10, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.22 }}
+        >
+          <h2 className="text-lg font-bold leading-snug text-text">{t('onboarding.welcome.title')}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted">{t('onboarding.welcome.body')}</p>
+          <div className="mt-5 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={startTour}
+              className="rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-bg transition hover:brightness-110"
+            >
+              {t('onboarding.welcome.start')}
+            </button>
+            <button
+              type="button"
+              onClick={dismiss}
+              className="rounded-full px-4 py-2 text-sm font-medium text-muted transition hover:text-text"
+            >
+              {t('onboarding.welcome.dismiss')}
+            </button>
+          </div>
+        </motion.div>
+      </div>,
+      document.body,
+    );
+  }
+
+  if (!showTour) return null;
 
   const copy = {
     title: t(`onboarding.${stepId}.title`),
