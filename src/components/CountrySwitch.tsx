@@ -1,15 +1,18 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
-import { PRESETS, PRESET_ORDER } from '../data/presets';
+import { GROUP_PRESETS, type GroupPresetId } from '../data/groupPresets';
 import { useSimulation } from '../state/store';
+import { handleRovingKeys } from '../lib/a11y';
 import { InfoDot } from './primitives/InfoDot';
+
+const ORDER: (GroupPresetId | 'custom')[] = ['US', 'UK', 'DE', 'custom'];
 
 /** Segmented control to load a country preset (or switch to Custom). */
 export function CountrySwitch() {
   const { t } = useTranslation();
   const prefersReduced = useReducedMotion();
-  const { presetId, selectPreset } = useSimulation();
+  const { presetLabel, selectCountry, markCustom } = useSimulation();
 
   return (
     <div data-tour="country">
@@ -20,19 +23,21 @@ export function CountrySwitch() {
       <div
         role="radiogroup"
         aria-label={t('country.label')}
+        onKeyDown={handleRovingKeys}
         className="grid grid-cols-4 gap-1 rounded-control border border-line bg-surface p-1"
       >
-        {PRESET_ORDER.map((id) => {
-          const preset = PRESETS[id];
-          const active = presetId === id;
-          const label = id === 'custom' ? t('presets.custom.name') : preset.shortLabel;
+        {ORDER.map((id) => {
+          const active = presetLabel === id;
+          const flag = id === 'custom' ? '🎛️' : GROUP_PRESETS[id].flag;
+          const label = id === 'custom' ? t('presets.custom.name') : t(`presets.${id}.short`);
           return (
             <button
               key={id}
               type="button"
               role="radio"
               aria-checked={active}
-              onClick={() => selectPreset(id)}
+              tabIndex={active ? 0 : -1}
+              onClick={() => (id === 'custom' ? markCustom() : selectCountry(id))}
               className={clsx(
                 'relative flex items-center justify-center gap-1.5 rounded-[0.6rem] px-1.5 py-2 text-sm font-semibold transition-colors',
                 active ? 'text-text' : 'text-muted hover:text-text',
@@ -49,7 +54,7 @@ export function CountrySwitch() {
               )}
               <span className="relative flex items-center gap-1.5">
                 <span aria-hidden="true" className="text-base leading-none">
-                  {preset.flag}
+                  {flag}
                 </span>
                 <span className="truncate">{label}</span>
               </span>

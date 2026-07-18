@@ -17,15 +17,18 @@ forecast**. Everything runs client-side; there is no backend and no tracking.
 ## Highlights
 
 - **A growing "pie"** — a donut whose area is proportional to total wealth, split
-  into the top 10% and everyone else, with a dashed ring marking the year-0 size.
-- **A divergence chart** — the top group's share of wealth over time, scrubbable
-  by year.
+  into four groups (top 1% / next 9% / middle 40% / bottom 50%), with a dashed
+  ring marking the year-0 size.
+- **A divergence chart** — a 100%-stacked area of every group's share over time,
+  scrubbable by year.
 - **Animated stat tiles** and a plain-language readout that always states both
-  sides: *"Everyone is 5.2× richer than year 0 — but the top 10% now owns 82%."*
+  sides: *"Everyone is 7.8× richer than year 0 — but the top 1% now owns 49% and
+  the top 10% owns 83%."*
 - **Country presets** (US / UK / Germany / Custom), each number carrying its
   source in a tooltip.
-- **A neutral "what could change this?" lever** — an annual wealth tax you can
-  watch bend the curve.
+- **Multiple wealth-tax designs** — a picker with real-world templates (flat,
+  “2% above 10M”, Warren, Zucman, Spain, Switzerland) plus a custom flat/threshold
+  tax, redistribution options, and a live revenue + households-taxed readout.
 - **Simple and Advanced views**, dark/light themes, first-visit onboarding, full
   keyboard support and `prefers-reduced-motion` handling.
 
@@ -75,40 +78,43 @@ The footer's "View source on GitHub" link reads `VITE_REPO_URL`. Copy
 
 ## How the model works
 
-The core lives in **[`src/model/simulation.ts`](src/model/simulation.ts)** — a
-pure, side-effect-free module with no React, so the math is auditable and unit-
-tested. The UI is a thin layer on top.
+The core lives in **[`src/model/wealthModel.ts`](src/model/wealthModel.ts)** — a
+pure, side-effect-free module with no React, so the math is auditable and
+unit-tested. The UI is a thin layer on top. (The original two-group version,
+[`src/model/simulation.ts`](src/model/simulation.ts), remains as a simpler
+reference.)
 
-It is a deliberately **stylized two-group compounding model**. The population is
-split into a **top group** (by default the top 10%) and **everyone else**. All
-returns are **real (inflation-adjusted)**.
+It splits the population into four groups — **top 1%**, **next 9%**, **middle
+40%** and **bottom 50%** — and compounds each group's wealth forward one year at a
+time. All returns are **real (inflation-adjusted)**.
 
-Starting from a total wealth of 1, split by the top group's initial share, each
-year:
+- **Differential returns.** Wealthier groups earn higher real returns: the bottom
+  50% grows at the economy rate `g`, the top 1% at the asset rate `r`, and the
+  middle groups in between. This is what makes the very top pull away from the
+  merely rich (Fagereng et al. 2020).
+- **Currency anchoring + Pareto tail.** Because a tax like "2% above 10M" depends
+  on real wealth *levels*, the model is anchored to each country's total private
+  wealth and household count, and the top decile is modeled as a **Pareto
+  distribution** whose index is calibrated each year from the top-1%-vs-top-10%
+  concentration. Threshold and progressive taxes are then computed in closed form
+  over that tail and attributed per group.
+- **Wealth-tax styles.** Three designs: a **flat** rate on a group's whole wealth,
+  a **marginal threshold** ("2% above X"), and **progressive brackets** (e.g.
+  Warren's 2% above 50M + 3% above 1B). Revenue is redistributed to the bottom
+  50% / bottom 90% / everyone, or removed.
 
-```
-wTop *= 1 + r/100 + s/100      # top group earns the asset return r (+ extra saving s)
-wBot *= 1 + g/100              # everyone else grows with the economy g
-if wealthTax > 0:              # optional annual wealth tax, redistributed
-    transfer = wTop * wealthTax/100
-    wTop -= transfer
-    wBot += transfer
-```
-
-From the resulting series, at any selected year the app derives:
-
-- **Economy multiple** — `total / total₀` ("the economy is N× bigger").
-- **Per-capita ratio** — `(wTop / popTop) / (wBot / popBot)` ("the top owns N×
-  more per person").
-- **Gini** — for a two-group split this is exactly `popBot − bottomShare`
-  (clamped to ≥ 0), assuming equality within each group.
+At any selected year the app derives the economy multiple, each group's share and
+per-household wealth, a grouped **Gini**, and — when a tax is active — the
+annual/cumulative revenue and the number of households taxed. It is unit-tested
+(`npm test`); on the US preset a Warren-style tax reproduces the Saez-Zucman
+decade revenue estimate (≈ $6T) closely.
 
 ### Assumptions and what the model leaves out
 
 This is an **illustration of one mechanism, not a forecast**. In particular:
 
-- The bottom group also owns assets (homes, pensions), so a clean two-group split
-  with a single return each is a simplification.
+- Within each group everyone is treated as equal (except the Pareto tail used for
+  taxes), which understates inequality *inside* the top.
 - People move between groups over time, and new fortunes enter the top.
 - Empirically, top wealth shares have risen sharply in the **US** but have been
   comparatively **flatter in the UK and Germany**.
@@ -117,36 +123,37 @@ This is an **illustration of one mechanism, not a forecast**. In particular:
 - The effectiveness of a **wealth tax** is debated (valuation, avoidance, capital
   flight).
 
-You can test all of this by moving `r`, `g` and the wealth-tax lever, and by
-comparing countries. The full two-sided discussion is in the app's *"How to read
-this"* panel.
+You can test all of this by moving `r`, `g`, the group shares and the wealth-tax
+lever, and by comparing countries. The full two-sided discussion is in the app's
+*"How to read this"* panel.
 
 ---
 
 ## Data sources
 
 Presets and citations live in
-**[`src/data/presets.ts`](src/data/presets.ts)**. Every figure is an
-illustrative anchor; each surfaces its source in the UI.
+**[`src/data/groupPresets.ts`](src/data/groupPresets.ts)** (the original
+two-group presets remain in `src/data/presets.ts`). Every figure is an
+illustrative anchor and surfaces its source in the app's **Sources & assumptions**
+panel.
 
-| Preset             | Top-10% wealth share | Asset return (r) | Economy growth (g) |
-| ------------------ | -------------------- | ---------------- | ------------------ |
-| **United States**  | 67%                  | 6.5%             | 2.0%               |
-| **United Kingdom** | 50% (range 43–57%)   | 5.5%             | 1.5%               |
-| **Germany**        | 60% (range 54–63%)   | 5.5%             | 1.0%               |
+| Share of wealth  | 🇺🇸 US | 🇬🇧 UK | 🇩🇪 DE |
+| ---------------- | ----: | ----: | ----: |
+| Top 1%           |   31% |  20%\* |   30% |
+| Next 9%          |   36% |   30% |   30% |
+| Middle 40%       | 30.5% |   45% |   37% |
+| Bottom 50%       |  2.5% |    5% |    3% |
+| Asset return (r) |  6.5% |  5.5% |  5.5% |
+| Economy growth (g) | 2.0% | 1.5% |  1.0% |
 
-- **US top-10% share** — [Federal Reserve DFA / St. Louis Fed](https://www.stlouisfed.org/open-vault/2025/june/the-state-of-us-household-wealth)
-  (Q4 2024 ≈ 67.2%; top 1% ≈ 31%, bottom 50% ≈ 2.5%).
-- **US economy growth** — [U.S. Bureau of Economic Analysis](https://www.bea.gov/data/gdp/gross-domestic-product).
-- **US asset return** — [NYU Stern / Damodaran](https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/histretSP.html)
-  (US equities long-run real ≈ 7%, set slightly below for diversified portfolios).
-- **UK top-10% share** — [ONS Wealth & Assets Survey](https://www.ons.gov.uk/peoplepopulationandcommunity/personalandhouseholdfinances/incomeandwealth)
-  (official ≈ 43%, adjusted upward via IFS / WID for under-coverage of the very wealthy).
-- **UK economy growth** — [ONS / Office for Budget Responsibility](https://obr.uk/).
-- **UK asset return** — Barclays Equity Gilt Study (UK equities real ≈ 5.1% since 1899).
-- **Germany top-10% share** — [Deutsche Bundesbank](https://www.bundesbank.de) survey ≈ 54%; [WID](https://wid.world) top-adjusted ≈ 60%.
-- **Germany economy growth** — [Destatis / Bundesbank](https://www.destatis.de/EN/) (recent real GDP ≈ 0–1%).
-- **Germany asset return** — [Deutsches Aktieninstitut — DAX-Renditedreieck](https://www.dai.de/renditedreieck/) (DAX real ≈ 5–6%), cross-checked with Piketty.
+\*The UK top-1% share is the most contested figure (ONS survey ≈ 10–13%, WID ≈ 21%).
+
+- **Group shares** — US: [Federal Reserve DFA / St. Louis Fed](https://www.federalreserve.gov/releases/z1/dataviz/dfa/distribute/table/) (Q4 2024); UK: [ONS Wealth & Assets Survey](https://www.ons.gov.uk/peoplepopulationandcommunity/personalandhouseholdfinances/incomeandwealth), top-adjusted with [WID](https://wid.world); DE: [Deutsche Bundesbank](https://www.bundesbank.de) + WID.
+- **Asset returns** — US: [NYU Stern / Damodaran](https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/histretSP.html); UK: Barclays Equity Gilt Study; DE: [Deutsches Aktieninstitut (DAX)](https://www.dai.de/renditedreieck/).
+- **Economy growth** — US: [BEA](https://www.bea.gov/data/gdp/gross-domestic-product); UK: [ONS / OBR](https://obr.uk/); DE: [Destatis / Bundesbank](https://www.destatis.de/EN/).
+- **Currency anchors** — US ≈ $158T / 131M households (Fed); UK ≈ £13.6T / 28M (ONS); DE ≈ €13.6T / 42M (Bundesbank/Destatis).
+- **Differential returns** — [Fagereng, Guiso, Malacrino & Pistaferri (2020)](https://onlinelibrary.wiley.com/doi/abs/10.3982/ecta14835).
+- **Wealth-tax designs** — [OECD](https://www.oecd.org/en/publications/the-role-and-design-of-net-wealth-taxes-in-the-oecd_9789264290303-en.html); [Tax Foundation](https://taxfoundation.org/data/all/eu/wealth-taxes-europe/); [Warren Ultra-Millionaire Tax](https://www.warren.senate.gov/newsroom/press-releases/warren-jayapal-boyle-reintroduce-ultra-millionaire-tax-on-fortunes-over-50-million/); [Zucman G20 blueprint](https://gabriel-zucman.eu/files/report-g20.pdf).
 - **Conceptual basis** — Thomas Piketty, *Capital in the Twenty-First Century*.
 
 ---
@@ -158,13 +165,15 @@ inequalculator/
 ├── index.html
 ├── src/
 │   ├── main.tsx / App.tsx
-│   ├── model/simulation.ts        # pure math — the core engine
-│   ├── model/simulation.test.ts   # Vitest unit tests
-│   ├── data/presets.ts            # country presets + sources
+│   ├── model/wealthModel.ts       # pure N-group engine + Pareto tail + taxes
+│   ├── model/wealthModel.test.ts  # Vitest unit tests
+│   ├── model/simulation.ts        # original two-group model (reference) + tests
+│   ├── data/groupPresets.ts       # group shares, currency anchors, tax catalog
+│   ├── data/presets.ts            # original two-group presets + sources
 │   ├── components/                # charts, controls, panels, primitives
 │   ├── state/                     # store, theme, onboarding hooks
 │   ├── i18n/                      # react-i18next config + en.json
-│   ├── lib/format.ts              # number formatting
+│   ├── lib/                       # number/currency formatting, group colors
 │   └── styles/index.css           # design tokens + base styles
 └── ...config files
 ```

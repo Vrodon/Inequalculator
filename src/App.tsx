@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { REPO_URL } from './config';
+import { REPO_CONFIGURED, REPO_URL } from './config';
 import { CountrySwitch } from './components/CountrySwitch';
 import { GrowingPie } from './components/GrowingPie';
 import { StatCards } from './components/StatCards';
 import { Controls } from './components/Controls';
 import { DivergenceChart } from './components/DivergenceChart';
-import { WhatCouldChange } from './components/WhatCouldChange';
+import { WealthTax } from './components/WealthTax';
 import { AdvancedPanel } from './components/AdvancedPanel';
 import { Onboarding } from './components/Onboarding';
 import { InfoPanel } from './components/InfoPanel';
@@ -58,7 +58,7 @@ export function App() {
           <div className="space-y-4">
             <Controls />
             <DivergenceChart />
-            <WhatCouldChange onOpenCaveats={() => openInfo('howToRead')} />
+            <WealthTax onOpenCaveats={() => openInfo('howToRead')} />
             <AdvancedPanel />
           </div>
         </main>
@@ -73,15 +73,17 @@ export function App() {
             >
               {t('footer.sources')}
             </button>
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 font-medium text-muted transition hover:text-text"
-            >
-              <GithubIcon size={16} />
-              {t('footer.code')}
-            </a>
+            {REPO_CONFIGURED && (
+              <a
+                href={REPO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 font-medium text-muted transition hover:text-text"
+              >
+                <GithubIcon size={16} />
+                {t('footer.code')}
+              </a>
+            )}
           </div>
           <p className="mt-3 text-xs text-faint">{t('footer.builtWith')}</p>
         </footer>

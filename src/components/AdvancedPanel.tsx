@@ -2,66 +2,76 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useSimulation } from '../state/store';
 import { useMediaQuery } from '../hooks/useMediaQuery';
-import { formatRate } from '../lib/format';
 import { RangeSlider } from './primitives/RangeSlider';
 import { Dialog } from './primitives/Dialog';
 import { SlidersIcon } from './icons';
 
+const pctValue = (v: number) => `${Math.round(v * 10) / 10}%`;
+
 /** The extra sliders revealed in the Advanced view. */
 function AdvancedControls() {
   const { t } = useTranslation();
-  const { params, setParam } = useSimulation();
+  const { shares, setShare, years, setYears } = useSimulation();
 
   return (
     <div className="space-y-5">
+      <div>
+        <p className="text-sm font-semibold text-text">{t('advanced.startingHeading')}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted">{t('advanced.startingHelp')}</p>
+      </div>
       <RangeSlider
-        label={t('advanced.startingDistribution')}
-        value={params.topInitialWealthShare}
-        min={40}
-        max={80}
-        step={1}
-        onChange={(v) => setParam('topInitialWealthShare', v)}
-        formatValue={(v) => `${Math.round(v)}%`}
-        help={t('advanced.startingDistributionHelp')}
-      />
-      <RangeSlider
-        label={t('advanced.extraSaving')}
-        value={params.extraSaving}
+        label={t('advanced.shareTop1')}
+        value={shares.top1}
         min={0}
-        max={3}
-        step={0.25}
-        onChange={(v) => setParam('extraSaving', v)}
-        formatValue={(v) => `${formatRate(v, 2)}/yr`}
-        help={t('advanced.extraSavingHelp')}
+        max={60}
+        step={0.5}
+        onChange={(v) => setShare('top1', v)}
+        formatValue={pctValue}
       />
       <RangeSlider
-        label={t('advanced.wealthTax')}
-        value={params.wealthTax}
+        label={t('advanced.shareNext9')}
+        value={shares.next9}
         min={0}
-        max={3}
-        step={0.05}
-        onChange={(v) => setParam('wealthTax', v)}
-        formatValue={(v) => (v === 0 ? t('change.off') : `${formatRate(v, 2)}/yr`)}
-        help={t('change.wealthTaxHelp')}
-      />
-      <RangeSlider
-        label={t('advanced.timeHorizon')}
-        value={params.years}
-        min={10}
         max={50}
-        step={1}
-        onChange={(v) => setParam('years', v)}
-        formatValue={(v) => t('units.years', { count: Math.round(v) })}
-        help={t('advanced.timeHorizonHelp')}
+        step={0.5}
+        onChange={(v) => setShare('next9', v)}
+        formatValue={pctValue}
       />
+      <RangeSlider
+        label={t('advanced.shareBottom50')}
+        value={shares.bottom50}
+        min={0}
+        max={30}
+        step={0.5}
+        onChange={(v) => setShare('bottom50', v)}
+        formatValue={pctValue}
+      />
+      <div className="flex items-center justify-between rounded-control bg-surface-2/60 px-4 py-2.5">
+        <span className="text-sm text-muted">{t('advanced.shareMiddle40')}</span>
+        <span className="tnum text-sm font-semibold text-text">{pctValue(shares.middle40)}</span>
+      </div>
+
+      <div className="border-t border-line pt-4">
+        <RangeSlider
+          label={t('advanced.timeHorizon')}
+          value={years}
+          min={10}
+          max={50}
+          step={1}
+          onChange={(v) => setYears(v)}
+          formatValue={(v) => t('units.years', { count: Math.round(v) })}
+          help={t('advanced.timeHorizonHelp')}
+        />
+      </div>
+
+      <p className="rounded-control border border-line bg-surface-2/50 px-3 py-2.5 text-xs leading-relaxed text-muted">
+        {t('advanced.returnsNote')}
+      </p>
     </div>
   );
 }
 
-/**
- * The Advanced toggle plus its content — an inline card on desktop, a bottom
- * sheet on mobile.
- */
+/** The Advanced toggle plus its content — an inline card on desktop, a sheet on mobile. */
 export function AdvancedPanel() {
   const { t } = useTranslation();
   const { view, setView } = useSimulation();

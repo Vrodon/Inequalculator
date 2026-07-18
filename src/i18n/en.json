@@ -24,16 +24,23 @@
     "help": "Load real-world starting figures for each country. Every number shows its source. Editing a core slider switches to Custom."
   },
   "presets": {
-    "US": { "name": "United States" },
-    "UK": { "name": "United Kingdom" },
-    "DE": { "name": "Germany" },
+    "US": { "name": "United States", "short": "US" },
+    "UK": { "name": "United Kingdom", "short": "UK" },
+    "DE": { "name": "Germany", "short": "DE" },
     "custom": { "name": "Custom" }
+  },
+  "groups": {
+    "top1": "Top 1%",
+    "next9": "Next 9%",
+    "middle40": "Middle 40%",
+    "bottom50": "Bottom 50%",
+    "top10": "Top 10%"
   },
   "controls": {
     "assetReturn": "Asset return (r)",
-    "assetReturnHelp": "The real, inflation-adjusted return the top group earns on its assets each year. Historically, broad stock markets have returned roughly 5–7% real over the long run.",
+    "assetReturnHelp": "The real, inflation-adjusted return the top group earns on its assets each year. Higher-wealth groups earn a share of this; the bottom 50% grows with the economy. Historically, broad stock markets have returned roughly 5–7% real.",
     "economyGrowth": "Economy growth (g)",
-    "economyGrowthHelp": "The real growth rate of the wider economy each year — the return applied to everyone else. This moves the tail end of the line up or down.",
+    "economyGrowthHelp": "The real growth rate of the wider economy each year — the return applied to the bottom 50%. This moves the tail end of the lines up or down.",
     "year": "Year",
     "yearHelp": "Scrub through time, or press play to watch wealth compound from year 0 to the horizon.",
     "play": "Play",
@@ -45,69 +52,105 @@
     "yearOf": "Year {{year}} of {{total}}"
   },
   "units": {
-    "percent": "{{value}}%",
-    "perYear": "%/yr",
-    "times": "{{value}}×",
     "years_one": "{{count}} year",
     "years_other": "{{count}} years"
   },
   "stats": {
-    "topShare": "Top {{pct}}% wealth share",
-    "topShareSub": "Share of all wealth owned by the top group",
-    "topShareFromTo": "from {{start}} at year 0",
+    "top1Share": "Top 1% wealth share",
+    "top1ShareSub": "Share owned by the richest 1%",
+    "top10Share": "Top 10% wealth share",
+    "top10ShareSub": "Share owned by the richest 10%",
     "economySize": "Economy size",
     "economySizeSub": "Total wealth vs year 0",
-    "perCapita": "Wealth per person",
-    "perCapitaSub": "Top group vs everyone else",
-    "perCapitaValue": "{{value}}× more",
     "gini": "Wealth Gini",
-    "giniSub": "0 = everyone equal · 1 = one owner",
-    "biggerLabel": "× bigger"
+    "giniSub": "0 = equal · 1 = one owner · lower bound",
+    "taxRevenue": "Tax raised",
+    "taxRevenueSub": "Cumulative to this year",
+    "householdsTaxed": "Households taxed",
+    "householdsTaxedSub": "Above the lowest threshold",
+    "householdsTaxedSubFlat": "The whole taxed group"
   },
   "readout": {
-    "start": "At the start, the top {{top}}% owns {{share}} of all wealth.",
-    "main": "Everyone is {{multiple}} richer than year 0 — but the top {{top}}% now owns {{share}} of all wealth.",
+    "start": "At the start, the top 1% owns {{top1}} and the top 10% owns {{top10}} of all wealth.",
+    "main": "Everyone is {{multiple}} richer than year 0 — but the top 1% now owns {{top1}} and the top 10% owns {{top10}}.",
     "note": "Both groups are richer in absolute terms. What changes is who owns the growth."
-  },
-  "legend": {
-    "top": "Top {{pct}}%",
-    "bottom": "Everyone else",
-    "topLong": "Top {{pct}}% of the population",
-    "bottomLong": "The other {{pct}}%"
   },
   "pie": {
     "title": "Who owns the wealth",
     "caption": "Economy {{multiple}} larger than year 0",
     "captionStart": "Total wealth at year 0",
-    "year0Ring": "Dashed ring = size of the economy at year 0",
-    "a11y": "Donut chart. At year {{year}}, total wealth is {{multiple}} its year-0 size. The top {{top}}% owns {{topShare}} and everyone else owns {{bottomShare}}."
+    "a11y": "Donut chart. At year {{year}}, total wealth is {{multiple}} its year-0 size. The top 1% owns {{top1}}, the next 9% {{next9}}, the middle 40% {{middle40}}, and the bottom 50% {{bottom50}}."
   },
   "divergence": {
-    "title": "Top group's wealth share over time",
-    "refLine": "50%",
-    "yAxis": "Top share",
-    "xAxis": "Year",
-    "a11y": "Line chart of the top {{top}}%'s share of total wealth from year 0 to year {{years}}. It starts at {{start}} and reaches {{end}} at the selected year {{year}}.",
+    "title": "How the shares diverge over time",
+    "a11y": "Stacked area chart of each group's share of total wealth from year 0 to year {{years}}. At the selected year {{year}}, the top 1% holds {{top1}} and the top 10% holds {{top10}}.",
     "scrubHint": "Tap or drag on the chart to change the year"
   },
-  "change": {
-    "title": "What could change this?",
-    "subtitle": "Add an annual wealth tax on the top group and watch the curve bend.",
-    "wealthTax": "Wealth tax on the top group",
-    "wealthTaxHelp": "A tax charged each year on the top group's wealth and redistributed to everyone else. Whether such a tax works in practice is debated — see the notes.",
+  "tax": {
+    "title": "Wealth tax",
+    "subtitle": "Choose a tax design and watch it bend the curve.",
+    "design": "Tax design",
+    "custom": "Custom",
+    "style": "Style",
+    "styleFlat": "Flat on the top 10%",
+    "styleThreshold": "Marginal above a threshold",
+    "rate": "Rate",
+    "threshold": "Threshold",
+    "brackets": "Brackets",
+    "redistribute": "Redistribute revenue to",
+    "redistributeHelp": "Where the collected tax goes each year. It is a transfer within the private economy unless set to “not redistributed”.",
+    "revenue": "Revenue raised",
+    "affected": "Households taxed",
     "off": "off",
-    "caveatLink": "Read the caveats on wealth taxes"
+    "perYear": "/yr",
+    "thresholdNote": "Threshold taxes are modeled within the top 10% — most accurate for the top 1%.",
+    "caveatLink": "Read the caveats on wealth taxes",
+    "redist": {
+      "bottom50": "Bottom 50%",
+      "bottom90": "Bottom 90%",
+      "all": "Everyone",
+      "none": "Not redistributed"
+    }
+  },
+  "taxPresets": {
+    "none": { "name": "No tax", "desc": "Wealth compounds untaxed." },
+    "flatTop10": {
+      "name": "Flat 1% on the top 10%",
+      "desc": "A flat annual rate on the entire wealth of the top decile."
+    },
+    "threshold10m": {
+      "name": "2% above 10M",
+      "desc": "A marginal 2%/yr on the wealth each household holds above 10M."
+    },
+    "warren": {
+      "name": "Warren 2% / 3%",
+      "desc": "2% above 50M and 3% above 1B — the US Ultra-Millionaire Tax."
+    },
+    "zucman": {
+      "name": "Zucman 2% above 100M",
+      "desc": "A 2% minimum on fortunes above 100M — the G20 blueprint."
+    },
+    "spain": {
+      "name": "Spain-style progressive",
+      "desc": "Rising bands from ~0.2% to 3.5%, like Spain's wealth + solidarity tax."
+    },
+    "swiss": {
+      "name": "Swiss-style broad",
+      "desc": "A low 0.6%/yr on net wealth above 100K, like Swiss cantons."
+    }
   },
   "advanced": {
     "title": "Advanced settings",
     "subtitle": "More factors, for exploring the mechanism in detail.",
-    "startingDistribution": "Starting distribution",
-    "startingDistributionHelp": "The top group's share of total wealth at year 0.",
-    "extraSaving": "Extra saving (top group)",
-    "extraSavingHelp": "Added to the top group's yearly growth — a proxy for higher reinvestment of returns rather than spending them.",
-    "wealthTax": "Wealth tax (fine control)",
+    "startingHeading": "Starting distribution",
+    "startingHelp": "Each group's share of total wealth at year 0. The middle 40% is the remainder.",
+    "shareTop1": "Top 1% share",
+    "shareNext9": "Next 9% share",
+    "shareBottom50": "Bottom 50% share",
+    "shareMiddle40": "Middle 40% (remainder)",
     "timeHorizon": "Time horizon",
     "timeHorizonHelp": "How many years to project forward.",
+    "returnsNote": "Assumption: higher-wealth groups earn higher real returns — the top 1% earns the asset return r, the bottom 50% the economy rate g, the others in between (Fagereng et al. 2020).",
     "done": "Done"
   },
   "onboarding": {
@@ -122,7 +165,7 @@
     },
     "rates": {
       "title": "Move the two rates",
-      "body": "Asset return (r) is what the top group earns; economy growth (g) is everyone else. When r beats g, wealth concentrates."
+      "body": "Asset return (r) is what the top earns; economy growth (g) is the bottom 50%. When r beats g, wealth concentrates."
     },
     "year": {
       "title": "Travel through time",
@@ -136,21 +179,31 @@
       "howToRead": "How to read this"
     },
     "modelHeading": "What this model is",
-    "modelBody": "Inequalculator is a stylized two-group compounding model. It splits the population into a top group (by default the top 10%) and everyone else, and compounds each group's wealth forward one year at a time using real, inflation-adjusted returns. The top group earns the asset return (r); everyone else grows with the economy (g). It is an illustration of one mechanism — it is not a forecast of any country's future.",
+    "modelBody": "Inequalculator is a stylized compounding model. It splits the population into four groups — the top 1%, the next 9%, the middle 40% and the bottom 50% — and compounds each group's wealth forward one year at a time using real, inflation-adjusted returns. It is an illustration of one mechanism, not a forecast of any country's future.",
     "rgHeading": "r > g, in plain language",
     "rgBody": "If the money you already own grows faster than the wages and output of the economy as a whole, then — all else equal — the people who own the most assets capture a growing share of total wealth over time. Thomas Piketty summarized this as r > g: the return on capital (r) exceeding the growth rate of the economy (g).",
+    "returnsHeading": "Why the groups earn different returns",
+    "returnsBody": "Wealthier households have historically earned higher real returns (more equities and business equity, less cash, cheaper leverage). The model reflects this with a gradient: the bottom 50% grows at the economy rate g, the top 1% at the asset rate r, and the middle groups in between. This is what makes the very top pull away from the merely rich.",
+    "paretoHeading": "How threshold taxes are modeled",
+    "paretoBody": "A tax like “2% on wealth above 10M” depends on actual wealth levels, so the model is anchored to each country's total private wealth and household count, and the top 10% is modeled as a Pareto distribution whose shape is calibrated from the top-1%-vs-top-10% concentration. Threshold and progressive taxes are computed in closed form over that tail. It is most accurate for the top 1%, where real wealth taxes bite.",
     "realReturnsNote": "All returns in this tool are real (inflation-adjusted), so the growth you see is on top of inflation.",
     "sourcesHeading": "Where the numbers come from",
     "sourceNoteLabel": "Note",
+    "anchorLabel": "Economy anchor",
+    "anchorValue": "{{wealth}} total wealth · {{households}} households",
+    "assumptionsHeading": "Modeling assumptions",
+    "taxDesignsHeading": "Wealth-tax designs",
     "leavesOutHeading": "What the model leaves out",
     "leavesOut": {
-      "twoGroup": "The bottom group also owns assets — homes and pensions in particular — so a clean two-group split with a single return for each side is a simplification.",
-      "mobility": "People move between groups over their lives, and new fortunes enter the top, which a fixed two-group model does not capture.",
+      "twoGroup": "Within each group everyone is treated as equal (except the Pareto tail used for taxes), which understates inequality inside the top.",
+      "mobility": "People move between groups over their lives, and new fortunes enter the top, which fixed groups do not capture.",
       "empirical": "Empirically, top wealth shares have risen sharply in the United States but have been comparatively flatter in the UK and Germany.",
-      "housing": "A prominent academic view (Matthew Rognlie) attributes much of the rising capital share specifically to housing, rather than to financial capital broadly.",
-      "wealthTax": "The effectiveness of a wealth tax is debated: valuation is hard, avoidance and capital flight are real, and estimates of the revenue it raises vary widely."
+      "housing": "A prominent academic view (Matthew Rognlie) attributes much of the rising capital share specifically to housing.",
+      "wealthTax": "The effectiveness of a wealth tax is debated: valuation is hard, avoidance and capital flight are real, and the model applies no avoidance, so its revenue is an upper bound. Germany's own wealth tax was suspended in 1997 over unequal asset valuation."
     },
-    "twoSidedNote": "You can test all of this yourself by moving r, g and the wealth-tax lever and comparing countries.",
+    "twoSidedNote": "You can test all of this yourself by moving r, g, the group shares and the tax lever, and comparing countries.",
+    "privacyHeading": "Privacy",
+    "privacyBody": "This tool runs entirely in your browser. It collects no personal data, sets no cookies, and makes no network requests. Only your theme choice and a first-visit flag are stored locally on your device.",
     "disclaimer": "An illustration of one mechanism, not a forecast or financial advice.",
     "pikettyLabel": "Conceptual basis",
     "close": "Close"
@@ -160,6 +213,11 @@
     "sources": "Sources & assumptions",
     "code": "View source on GitHub",
     "builtWith": "All figures are illustrative anchors; each shows its source."
+  },
+  "error": {
+    "title": "Something went wrong",
+    "body": "The calculator hit an unexpected state. Reloading should fix it.",
+    "reload": "Reload"
   },
   "common": {
     "source": "Source",

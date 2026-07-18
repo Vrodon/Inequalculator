@@ -1,88 +1,105 @@
-import { useId, useMemo, useRef } from 'react';
-import { area as d3area, line as d3line, curveMonotoneX } from 'd3-shape';
+import { useMemo, useRef } from 'react';
+import { area as d3area, curveMonotoneX } from 'd3-shape';
 import { scaleLinear } from 'd3-scale';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useSimulation } from '../state/store';
-import type { YearPoint } from '../model/simulation';
+import type { GroupKey } from '../data/groupPresets';
+import { groupFill } from '../lib/groupColors';
+import { clamp } from '../lib/math';
 import { formatPercent } from '../lib/format';
+import { GroupLegend } from './primitives/GroupLegend';
 
 const W = 640;
 const H = 280;
-const M = { top: 18, right: 16, bottom: 28, left: 38 };
+const M = { top: 16, right: 14, bottom: 26, left: 38 };
 
-const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+// Stacking order, bottom of chart → top.
+const STACK: GroupKey[] = ['bottom50', 'middle40', 'next9', 'top1'];
+
+interface BandPoint {
+  year: number;
+  y0: number;
+  y1: number;
+}
 
 /**
- * The divergence chart: the top group's share of total wealth over time, with a
- * 50% reference line and a marker synced to the year scrubber. Tap or drag on
- * the chart to change the year (the accessible year control lives in Controls).
+ * The divergence chart: a 100%-stacked area of the four groups' wealth shares
+ * over time, so rising concentration is visible as the top bands thickening.
+ * Tap or drag to change the year (the accessible year control is in Controls).
  */
 export function DivergenceChart() {
   const { t } = useTranslation();
   const prefersReduced = useReducedMotion();
-  const { result, selectedYear, setYear, pause, params } = useSimulation();
-  const gradientId = useId();
-  const svgRef = useRef<SVGSVGElement>(null);
-  const dragging = useRef(false);
+  const { result, selectedYear, setYear, pause, years } = useSimulation();
 
-  const years = params.years;
   const series = result.series;
 
   const x = useMemo(() => scaleLinear().domain([0, years]).range([M.left, W - M.right]), [years]);
   const y = useMemo(() => scaleLinear().domain([0, 1]).range([H - M.bottom, M.top]), []);
 
-  const linePath = useMemo(() => {
-    const gen = d3line<YearPoint>()
-      .x((d) => x(d.year))
-      .y((d) => y(d.topShare))
-      .curve(curveMonotoneX);
-    return gen(series) ?? '';
-  }, [series, x, y]);
-
-  const areaPath = useMemo(() => {
-    const gen = d3area<YearPoint>()
-      .x((d) => x(d.year))
-      .y0(y(0))
-      .y1((d) => y(d.topShare))
-      .curve(curveMonotoneX);
-    return gen(series) ?? '';
+  const bands = useMemo(() => {
+    const shareOf = (yr: (typeof series)[number], key: GroupKey) =>
+      yr.groups.find((g) => g.key === key)?.share ?? 0;
+    return STACK.map((key, ki) => {
+      const pts: BandPoint[] = series.map((yr) => {
+        let below = 0;
+        for (let j = 0; j < ki; j++) below += shareOf(yr, STACK[j]);
+        return { year: yr.year, y0: below, y1: below + shareOf(yr, key) };
+      });
+      const gen = d3area<BandPoint>()
+        .x((d) => x(d.year))
+        .y0((d) => y(d.y0))
+        .y1((d) => y(d.y1))
+        .curve(curveMonotoneX);
+      return { key, d: gen(pts) ?? '' };
+    });
   }, [series, x, y]);
 
   const idx = Math.min(selectedYear, series.length - 1);
-  const markerShare = series[idx].topShare;
+  const shareOfNow = (key: GroupKey) => series[idx].groups.find((g) => g.key === key)?.share ?? 0;
+  const top1 = shareOfNow('top1');
+  const top10 = top1 + shareOfNow('next9');
   const mx = x(selectedYear);
-  const my = y(markerShare);
 
   const transition = prefersReduced
     ? { duration: 0 }
     : ({ type: 'spring', stiffness: 130, damping: 26 } as const);
 
+  const svgRef = useRef<SVGSVGElement>(null);
+  const dragging = useRef(false);
   const yearFromEvent = (clientX: number) => {
     const svg = svgRef.current;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
     if (rect.width === 0) return;
     const px = ((clientX - rect.left) / rect.width) * W;
-    const yr = clamp(Math.round(x.invert(px)), 0, years);
-    setYear(yr);
+    setYear(clamp(Math.round(x.invert(px)), 0, years));
   };
 
   const a11y = t('divergence.a11y', {
-    top: params.topPercentile,
     years,
-    start: formatPercent(series[0].topShare),
-    end: formatPercent(markerShare),
     year: selectedYear,
+    top1: formatPercent(top1),
+    top10: formatPercent(top10),
   });
 
   return (
     <div className="card p-5">
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
           {t('divergence.title')}
         </h2>
-        <span className="tnum text-sm font-semibold text-accent">{formatPercent(markerShare)}</span>
+        <div className="flex items-center gap-3 text-sm">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-[3px] bg-g1" aria-hidden="true" />
+            <span className="text-muted">{t('groups.top1')}</span>
+            <span className="tnum font-semibold text-text">{formatPercent(top1)}</span>
+          </span>
+          <span className="text-muted">
+            {t('groups.top10')} <span className="tnum font-semibold text-text">{formatPercent(top10)}</span>
+          </span>
+        </div>
       </div>
 
       <svg
@@ -94,75 +111,56 @@ export function DivergenceChart() {
         style={{ cursor: 'ew-resize' }}
       >
         <title>{a11y}</title>
-        <defs>
-          <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="rgb(var(--c-accent))" stopOpacity={0.3} />
-            <stop offset="100%" stopColor="rgb(var(--c-accent))" stopOpacity={0.02} />
-          </linearGradient>
-        </defs>
 
-        {/* horizontal gridlines + y labels */}
-        {[0, 0.5, 1].map((v) => (
-          <g key={v}>
-            <line
-              x1={M.left}
-              x2={W - M.right}
-              y1={y(v)}
-              y2={y(v)}
-              stroke="rgb(var(--c-line))"
-              strokeWidth={1}
-              strokeDasharray={v === 0.5 ? '4 5' : undefined}
-              strokeOpacity={v === 0.5 ? 1 : 0.5}
-            />
-            <text
-              x={M.left - 8}
-              y={y(v)}
-              textAnchor="end"
-              dominantBaseline="central"
-              fontSize={12}
-              fill="rgb(var(--c-faint))"
-              className="tnum"
-            >
-              {formatPercent(v)}
-            </text>
-          </g>
+        {bands.map((b) => (
+          <motion.path
+            key={b.key}
+            initial={false}
+            animate={{ d: b.d }}
+            transition={transition}
+            fill={groupFill(b.key)}
+            stroke="rgb(var(--c-surface))"
+            strokeWidth={1.25}
+          />
         ))}
 
-        {/* x labels: 0 and horizon */}
-        <text
-          x={x(0)}
-          y={H - 8}
-          textAnchor="start"
-          fontSize={12}
-          fill="rgb(var(--c-faint))"
-          className="tnum"
-        >
-          {t('divergence.xAxis')} 0
+        {/* 50% reference line */}
+        <line
+          x1={M.left}
+          x2={W - M.right}
+          y1={y(0.5)}
+          y2={y(0.5)}
+          stroke="rgb(var(--c-text))"
+          strokeOpacity={0.35}
+          strokeDasharray="4 5"
+          strokeWidth={1}
+        />
+
+        {/* y labels */}
+        {[0, 0.5, 1].map((v) => (
+          <text
+            key={v}
+            x={M.left - 8}
+            y={y(v)}
+            textAnchor="end"
+            dominantBaseline="central"
+            fontSize={12}
+            fill="rgb(var(--c-faint))"
+            className="tnum"
+          >
+            {formatPercent(v)}
+          </text>
+        ))}
+
+        {/* x labels */}
+        <text x={x(0)} y={H - 8} textAnchor="start" fontSize={12} fill="rgb(var(--c-faint))" className="tnum">
+          0
         </text>
-        <text
-          x={x(years)}
-          y={H - 8}
-          textAnchor="end"
-          fontSize={12}
-          fill="rgb(var(--c-faint))"
-          className="tnum"
-        >
+        <text x={x(years)} y={H - 8} textAnchor="end" fontSize={12} fill="rgb(var(--c-faint))" className="tnum">
           {years}
         </text>
 
-        <path d={areaPath} fill={`url(#${gradientId})`} />
-        <motion.path
-          initial={false}
-          animate={{ d: linePath }}
-          transition={transition}
-          fill="none"
-          stroke="rgb(var(--c-accent))"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* year marker: vertical guide + dot */}
+        {/* year marker */}
         <motion.line
           initial={false}
           animate={{ x1: mx, x2: mx }}
@@ -170,20 +168,9 @@ export function DivergenceChart() {
           y1={M.top}
           y2={H - M.bottom}
           stroke="rgb(var(--c-text))"
-          strokeOpacity={0.25}
-          strokeWidth={1}
-        />
-        <motion.circle
-          initial={false}
-          animate={{ cx: mx, cy: my }}
-          transition={transition}
-          r={6}
-          fill="rgb(var(--c-accent))"
-          stroke="rgb(var(--c-bg))"
-          strokeWidth={2.5}
+          strokeWidth={1.5}
         />
 
-        {/* transparent overlay to capture tap / drag scrubbing */}
         <rect
           x={M.left}
           y={0}
@@ -198,18 +185,18 @@ export function DivergenceChart() {
             pause();
             yearFromEvent(e.clientX);
           }}
-          onPointerMove={(e) => {
-            if (dragging.current) yearFromEvent(e.clientX);
-          }}
+          onPointerMove={(e) => dragging.current && yearFromEvent(e.clientX)}
           onPointerUp={(e) => {
             dragging.current = false;
             (e.target as Element).releasePointerCapture(e.pointerId);
           }}
-          onPointerCancel={() => {
-            dragging.current = false;
-          }}
+          onPointerCancel={() => (dragging.current = false)}
         />
       </svg>
+
+      <div className="mt-3">
+        <GroupLegend groups={series[idx].groups.map((g) => ({ key: g.key as GroupKey, share: g.share }))} />
+      </div>
       <p className="mt-1 text-center text-xs text-faint md:hidden">{t('divergence.scrubHint')}</p>
     </div>
   );

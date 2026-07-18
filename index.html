@@ -11,6 +11,27 @@
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#0a0b0d" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#faf9f6" media="(prefers-color-scheme: light)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <!-- Social sharing (Open Graph / Twitter).
+         Card is "summary" because no share image ships in the repo. Before a
+         public deploy, add a 1200x630 image to public/ and these absolute-URL
+         tags, then switch the card to "summary_large_image":
+           <meta property="og:url" content="https://your-domain/" />
+           <meta property="og:image" content="https://your-domain/og-cover.png" />
+           <meta name="twitter:image" content="https://your-domain/og-cover.png" /> -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Inequalculator" />
+    <meta
+      property="og:description"
+      content="An interactive sandbox showing how asset returns compounding faster than the economy (Piketty's r > g) shape wealth inequality in the US, UK and Germany."
+    />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Inequalculator" />
+    <meta
+      name="twitter:description"
+      content="See how r > g compounds wealth inequality in the US, UK and Germany."
+    />
     <script>
       // Apply the saved theme before first paint so there is no flash of the
       // wrong colors. Dark is the default when nothing is stored.

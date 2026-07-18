@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { PRESETS } from '../data/presets';
 import { useSimulation } from '../state/store';
 import { formatRate } from '../lib/format';
 import { RangeSlider } from './primitives/RangeSlider';
@@ -11,32 +10,43 @@ const yearValue = (v: number) => String(Math.round(v));
 
 /** The core Simple-view controls: the two rate sliders and the year scrubber. */
 export function Controls() {
+  const {
+    assetReturn,
+    economyGrowth,
+    years,
+    selectedYear,
+    playing,
+    preset,
+    setReturn,
+    setYear,
+    togglePlay,
+    pause,
+    reset,
+  } = useSimulation();
+
   const { t } = useTranslation();
-  const { params, presetId, setParam, selectedYear, setYear, playing, togglePlay, pause, reset } =
-    useSimulation();
-  const preset = PRESETS[presetId];
 
   return (
     <div className="card space-y-5 p-5">
       <div data-tour="rates" className="space-y-5">
         <RangeSlider
           label={t('controls.assetReturn')}
-          value={params.assetReturn}
+          value={assetReturn}
           min={0}
           max={12}
           step={0.5}
-          onChange={(v) => setParam('assetReturn', v)}
+          onChange={(v) => setReturn('assetReturn', v)}
           formatValue={rate}
           help={`${t('controls.assetReturnHelp')} ${preset.assetReturn.note ?? ''}`}
           source={preset.assetReturn.source}
         />
         <RangeSlider
           label={t('controls.economyGrowth')}
-          value={params.economyGrowth}
+          value={economyGrowth}
           min={0}
           max={6}
           step={0.5}
-          onChange={(v) => setParam('economyGrowth', v)}
+          onChange={(v) => setReturn('economyGrowth', v)}
           formatValue={rate}
           help={`${t('controls.economyGrowthHelp')} ${preset.economyGrowth.note ?? ''}`}
           source={preset.economyGrowth.source}
@@ -50,7 +60,7 @@ export function Controls() {
             <InfoDot title={t('controls.year')} note={t('controls.yearHelp')} />
           </div>
           <span className="tnum text-sm font-semibold text-text">
-            {t('controls.yearOf', { year: selectedYear, total: params.years })}
+            {t('controls.yearOf', { year: selectedYear, total: years })}
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -68,13 +78,13 @@ export function Controls() {
               label={t('controls.year')}
               value={selectedYear}
               min={0}
-              max={params.years}
+              max={years}
               step={1}
               onChange={setYear}
               onScrubStart={pause}
               showBubble
               formatValue={yearValue}
-              ariaValueText={t('controls.yearOf', { year: selectedYear, total: params.years })}
+              ariaValueText={t('controls.yearOf', { year: selectedYear, total: years })}
             />
           </div>
           <button

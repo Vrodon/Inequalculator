@@ -1,6 +1,5 @@
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -10,82 +9,136 @@ import {
 } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import {
-  deriveStats,
-  runSimulation,
-  type DerivedStats,
-  type SimulationParams,
-  type SimulationResult,
-} from '../model/simulation';
-import { PRESETS, presetToParams, type PresetId } from '../data/presets';
+  assignReturns,
+  deriveWealthStats,
+  makeParetoTail,
+  runWealthModel,
+  type RedistributionTarget,
+  type TaxSpec,
+  type WealthDerivedStats,
+  type WealthGroup,
+  type WealthModelResult,
+} from '../model/wealthModel';
+import {
+  GROUP_DEFS,
+  GROUP_PRESETS,
+  TAX_PRESETS,
+  type GroupCountryPreset,
+  type GroupKey,
+  type GroupPresetId,
+  type TaxPresetId,
+} from '../data/groupPresets';
+import { clamp } from '../lib/math';
 
 export type View = 'simple' | 'advanced';
-
-/** The three values that define a country preset; editing one switches to Custom. */
-const CORE_KEYS = ['topInitialWealthShare', 'assetReturn', 'economyGrowth'] as const;
-export type ParamKey = keyof SimulationParams;
+export type TaxSelection = TaxPresetId | 'custom';
+export type CustomTaxStyle = 'flatOnGroups' | 'marginal';
 
 interface State {
-  presetId: PresetId;
-  params: SimulationParams;
+  country: GroupPresetId; // supplies the currency anchor
+  custom: boolean; // whether the core values deviate from the country preset
+  assetReturn: number; // r
+  economyGrowth: number; // g
+  years: number;
+  shares: Record<GroupKey, number>; // percent, sums to 100
+  taxSelection: TaxSelection;
+  customTax: { style: CustomTaxStyle; rate: number; threshold: number };
+  redistribution: RedistributionTarget;
   selectedYear: number;
   playing: boolean;
   view: View;
 }
 
+type CoreReturnKey = 'assetReturn' | 'economyGrowth';
+
 type Action =
-  | { type: 'selectPreset'; id: PresetId }
-  | { type: 'setParam'; key: ParamKey; value: number }
+  | { type: 'selectCountry'; id: GroupPresetId }
+  | { type: 'markCustom' }
+  | { type: 'setReturn'; key: CoreReturnKey; value: number }
+  | { type: 'setShare'; key: GroupKey; value: number }
+  | { type: 'setYears'; value: number }
   | { type: 'setYear'; year: number }
   | { type: 'setPlaying'; playing: boolean }
   | { type: 'setView'; view: View }
+  | { type: 'setTaxSelection'; selection: TaxSelection }
+  | { type: 'setCustomTax'; patch: Partial<State['customTax']> }
+  | { type: 'setRedistribution'; target: RedistributionTarget }
   | { type: 'reset' };
 
-const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+function sharesFromPreset(id: GroupPresetId): Record<GroupKey, number> {
+  const p = GROUP_PRESETS[id];
+  return {
+    top1: p.groupShares.top1.value * 100,
+    next9: p.groupShares.next9.value * 100,
+    middle40: p.groupShares.middle40.value * 100,
+    bottom50: p.groupShares.bottom50.value * 100,
+  };
+}
 
 function initialState(): State {
-  const params = presetToParams(PRESETS.US);
   return {
-    presetId: 'US',
-    params,
-    selectedYear: params.years, // start at the horizon so the effect is visible
+    country: 'US',
+    custom: false,
+    assetReturn: GROUP_PRESETS.US.assetReturn.value,
+    economyGrowth: GROUP_PRESETS.US.economyGrowth.value,
+    years: 40,
+    shares: sharesFromPreset('US'),
+    taxSelection: 'none',
+    customTax: { style: 'marginal', rate: 2, threshold: 10_000_000 },
+    redistribution: 'bottom50',
+    selectedYear: 40,
     playing: false,
     view: 'simple',
   };
 }
 
+/** Set one editable share and keep middle40 as the residual so shares sum to 100. */
+function updateShares(
+  shares: Record<GroupKey, number>,
+  key: GroupKey,
+  value: number,
+): Record<GroupKey, number> {
+  const next = { ...shares };
+  if (key === 'middle40') {
+    next.middle40 = clamp(value, 0, 100);
+    return next;
+  }
+  const others = (['top1', 'next9', 'bottom50'] as GroupKey[])
+    .filter((k) => k !== key)
+    .reduce((s, k) => s + next[k], 0);
+  next[key] = clamp(value, 0, 100 - others);
+  next.middle40 = clamp(100 - next.top1 - next.next9 - next.bottom50, 0, 100);
+  return next;
+}
+
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case 'selectPreset': {
-      if (action.id === 'custom') {
-        // Keep the current core values; just relabel the configuration Custom.
-        return { ...state, presetId: 'custom' };
-      }
-      const preset = PRESETS[action.id];
-      const params: SimulationParams = {
-        ...state.params,
-        topInitialWealthShare: preset.topInitialWealthShare.value,
-        assetReturn: preset.assetReturn.value,
-        economyGrowth: preset.economyGrowth.value,
-      };
+    case 'selectCountry': {
+      const p = GROUP_PRESETS[action.id];
       return {
         ...state,
-        presetId: action.id,
-        params,
+        country: action.id,
+        custom: false,
+        assetReturn: p.assetReturn.value,
+        economyGrowth: p.economyGrowth.value,
+        shares: sharesFromPreset(action.id),
+        selectedYear: clamp(state.selectedYear, 0, state.years),
         playing: false,
-        selectedYear: clamp(state.selectedYear, 0, params.years),
       };
     }
-    case 'setParam': {
-      const params = { ...state.params, [action.key]: action.value };
-      const isCore = (CORE_KEYS as readonly string[]).includes(action.key);
-      const presetId = isCore ? 'custom' : state.presetId;
-      const selectedYear =
-        action.key === 'years' ? clamp(state.selectedYear, 0, action.value) : state.selectedYear;
-      return { ...state, params, presetId, selectedYear };
+    case 'markCustom':
+      return state.custom ? state : { ...state, custom: true };
+    case 'setReturn':
+      return { ...state, [action.key]: action.value, custom: true };
+    case 'setShare':
+      return { ...state, shares: updateShares(state.shares, action.key, action.value), custom: true };
+    case 'setYears': {
+      const years = Math.round(action.value);
+      return { ...state, years, selectedYear: clamp(state.selectedYear, 0, years) };
     }
     case 'setYear': {
-      const y = clamp(Math.round(action.year), 0, state.params.years);
-      if (y === state.selectedYear) return state; // bail out — avoids re-render churn
+      const y = clamp(Math.round(action.year), 0, state.years);
+      if (y === state.selectedYear) return state;
       return { ...state, selectedYear: y };
     }
     case 'setPlaying':
@@ -93,27 +146,66 @@ function reducer(state: State, action: Action): State {
       return { ...state, playing: action.playing };
     case 'setView':
       return { ...state, view: action.view };
+    case 'setTaxSelection':
+      return { ...state, taxSelection: action.selection };
+    case 'setCustomTax':
+      return { ...state, taxSelection: 'custom', customTax: { ...state.customTax, ...action.patch } };
+    case 'setRedistribution':
+      return { ...state, redistribution: action.target };
     case 'reset': {
-      const base = PRESETS[state.presetId] ?? PRESETS.custom;
-      const params = presetToParams(base);
-      return { ...state, params, selectedYear: params.years, playing: false };
+      const p = GROUP_PRESETS[state.country];
+      return {
+        ...state,
+        custom: false,
+        assetReturn: p.assetReturn.value,
+        economyGrowth: p.economyGrowth.value,
+        years: 40,
+        shares: sharesFromPreset(state.country),
+        taxSelection: 'none',
+        redistribution: 'bottom50',
+        selectedYear: 40,
+        playing: false,
+      };
     }
     default:
       return state;
   }
 }
 
+function resolveTax(selection: TaxSelection, customTax: State['customTax']): TaxSpec {
+  if (selection === 'custom') {
+    if (customTax.style === 'flatOnGroups') {
+      return { style: 'flatOnGroups', rate: customTax.rate, taxedGroupKeys: ['top1', 'next9'] };
+    }
+    return { style: 'marginal', brackets: [{ threshold: customTax.threshold, rate: customTax.rate }] };
+  }
+  const preset = TAX_PRESETS.find((t) => t.id === selection);
+  return preset ? preset.build() : { style: 'none' };
+}
+
 interface StoreValue extends State {
-  result: SimulationResult;
-  stats: DerivedStats;
-  startStats: DerivedStats;
-  selectPreset: (id: PresetId) => void;
-  setParam: (key: ParamKey, value: number) => void;
+  preset: GroupCountryPreset;
+  currencySymbol: string;
+  presetLabel: GroupPresetId | 'custom';
+  result: WealthModelResult;
+  stats: WealthDerivedStats;
+  startStats: WealthDerivedStats;
+  taxSpec: TaxSpec;
+  taxActive: boolean;
+  householdsTaxed: number;
+  selectCountry: (id: GroupPresetId) => void;
+  markCustom: () => void;
+  setReturn: (key: CoreReturnKey, value: number) => void;
+  setShare: (key: GroupKey, value: number) => void;
+  setYears: (value: number) => void;
   setYear: (year: number) => void;
   play: () => void;
   pause: () => void;
   togglePlay: () => void;
   setView: (view: View) => void;
+  setTaxSelection: (selection: TaxSelection) => void;
+  setCustomTax: (patch: Partial<State['customTax']>) => void;
+  setRedistribution: (target: RedistributionTarget) => void;
   reset: () => void;
 }
 
@@ -124,89 +216,116 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
   const prefersReduced = useReducedMotion();
   const rafRef = useRef<number | null>(null);
 
-  const result = useMemo(() => runSimulation(state.params), [state.params]);
-  const stats = useMemo(() => deriveStats(result, state.selectedYear), [result, state.selectedYear]);
-  const startStats = useMemo(() => deriveStats(result, 0), [result]);
+  const preset = GROUP_PRESETS[state.country];
 
-  // Autoplay: animate the year from its current position to the horizon.
+  const groups = useMemo<WealthGroup[]>(() => {
+    const g: WealthGroup[] = GROUP_DEFS.map((d) => ({
+      key: d.key,
+      labelKey: d.labelKey,
+      popShare: d.popShare,
+      initialWealthShare: state.shares[d.key] / 100,
+      realReturn: 0,
+    }));
+    return assignReturns(g, state.economyGrowth, state.assetReturn);
+  }, [state.shares, state.economyGrowth, state.assetReturn]);
+
+  const tax = useMemo(
+    () => resolveTax(state.taxSelection, state.customTax),
+    [state.taxSelection, state.customTax],
+  );
+
+  const result = useMemo(
+    () =>
+      runWealthModel({
+        years: state.years,
+        groups,
+        anchor: preset.anchor,
+        tax,
+        redistribution: state.redistribution,
+      }),
+    [state.years, groups, preset, tax, state.redistribution],
+  );
+
+  const stats = useMemo(() => deriveWealthStats(result, state.selectedYear), [result, state.selectedYear]);
+  const startStats = useMemo(() => deriveWealthStats(result, 0), [result]);
+
+  // Households paying tax at the selected year (above the lowest threshold).
+  const householdsTaxed = useMemo(() => {
+    const idx = clamp(Math.round(state.selectedYear), 0, result.series.length - 1);
+    const now = result.series[idx];
+    if (tax.style === 'flatOnGroups') {
+      const keys = new Set(tax.taxedGroupKeys ?? []);
+      return (
+        GROUP_DEFS.filter((d) => keys.has(d.key)).reduce((s, d) => s + d.popShare, 0) *
+        result.households
+      );
+    }
+    if (tax.style === 'marginal' && tax.brackets?.length) {
+      const t0 = Math.min(...tax.brackets.map((b) => b.threshold));
+      const tail = makeParetoTail(
+        preset.anchor.tailPopShare * result.households,
+        now.paretoAlpha,
+        now.paretoWMin,
+      );
+      return tail.countAbove(t0);
+    }
+    return 0;
+  }, [tax, result, preset, state.selectedYear]);
+
+  // Autoplay: animate the year to the horizon.
   useEffect(() => {
     if (!state.playing) return;
-    const total = state.params.years;
-
+    const total = state.years;
     if (prefersReduced) {
       dispatch({ type: 'setYear', year: total });
       dispatch({ type: 'setPlaying', playing: false });
       return;
     }
-
     const from = state.selectedYear >= total ? 0 : state.selectedYear;
     const duration = clamp(total * 130, 2600, 6500);
     let startTs: number | null = null;
-
     const tick = (ts: number) => {
       if (startTs == null) startTs = ts;
       const t = clamp((ts - startTs) / duration, 0, 1);
       dispatch({ type: 'setYear', year: from + (total - from) * t });
-      if (t < 1) {
-        rafRef.current = requestAnimationFrame(tick);
-      } else {
-        dispatch({ type: 'setPlaying', playing: false });
-      }
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+      else dispatch({ type: 'setPlaying', playing: false });
     };
-
     rafRef.current = requestAnimationFrame(tick);
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-    // Intentionally only re-run when playback starts/stops; the start year is
-    // captured at that moment on purpose.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.playing]);
-
-  const selectPreset = useCallback((id: PresetId) => dispatch({ type: 'selectPreset', id }), []);
-  const setParam = useCallback(
-    (key: ParamKey, value: number) => dispatch({ type: 'setParam', key, value }),
-    [],
-  );
-  const setYear = useCallback((year: number) => dispatch({ type: 'setYear', year }), []);
-  const play = useCallback(() => dispatch({ type: 'setPlaying', playing: true }), []);
-  const pause = useCallback(() => dispatch({ type: 'setPlaying', playing: false }), []);
-  const togglePlay = useCallback(
-    () => dispatch({ type: 'setPlaying', playing: !state.playing }),
-    [state.playing],
-  );
-  const setView = useCallback((view: View) => dispatch({ type: 'setView', view }), []);
-  const reset = useCallback(() => dispatch({ type: 'reset' }), []);
 
   const value = useMemo<StoreValue>(
     () => ({
       ...state,
+      preset,
+      currencySymbol: preset.anchor.currencySymbol,
+      presetLabel: state.custom ? 'custom' : state.country,
       result,
       stats,
       startStats,
-      selectPreset,
-      setParam,
-      setYear,
-      play,
-      pause,
-      togglePlay,
-      setView,
-      reset,
+      taxSpec: tax,
+      taxActive: state.taxSelection !== 'none',
+      householdsTaxed,
+      selectCountry: (id) => dispatch({ type: 'selectCountry', id }),
+      markCustom: () => dispatch({ type: 'markCustom' }),
+      setReturn: (key, value2) => dispatch({ type: 'setReturn', key, value: value2 }),
+      setShare: (key, value2) => dispatch({ type: 'setShare', key, value: value2 }),
+      setYears: (value2) => dispatch({ type: 'setYears', value: value2 }),
+      setYear: (year) => dispatch({ type: 'setYear', year }),
+      play: () => dispatch({ type: 'setPlaying', playing: true }),
+      pause: () => dispatch({ type: 'setPlaying', playing: false }),
+      togglePlay: () => dispatch({ type: 'setPlaying', playing: !state.playing }),
+      setView: (view) => dispatch({ type: 'setView', view }),
+      setTaxSelection: (selection) => dispatch({ type: 'setTaxSelection', selection }),
+      setCustomTax: (patch) => dispatch({ type: 'setCustomTax', patch }),
+      setRedistribution: (target) => dispatch({ type: 'setRedistribution', target }),
+      reset: () => dispatch({ type: 'reset' }),
     }),
-    [
-      state,
-      result,
-      stats,
-      startStats,
-      selectPreset,
-      setParam,
-      setYear,
-      play,
-      pause,
-      togglePlay,
-      setView,
-      reset,
-    ],
+    [state, preset, tax, result, stats, startStats, householdsTaxed],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

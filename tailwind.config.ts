@@ -23,10 +23,15 @@ export default {
         muted: withVar('--c-muted'),
         faint: withVar('--c-faint'),
         // Semantic group colors, used consistently across pie, chart and legend.
-        accent: withVar('--c-accent'), // the top group (warm)
+        accent: withVar('--c-accent'), // interactive accent (warm)
         'accent-soft': withVar('--c-accent-soft'),
-        cool: withVar('--c-cool'), // everyone else (cool / muted)
+        cool: withVar('--c-cool'),
         'cool-soft': withVar('--c-cool-soft'),
+        // Ordered wealth-group palette (warm = top, cool = bottom).
+        g1: withVar('--c-g1'), // top 1%
+        g2: withVar('--c-g2'), // next 9%
+        g3: withVar('--c-g3'), // middle 40%
+        g4: withVar('--c-g4'), // bottom 50%
       },
       fontFamily: {
         sans: [

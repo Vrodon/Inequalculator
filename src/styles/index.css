@@ -27,6 +27,11 @@
   --c-accent-soft: 176 120 40;
   --c-cool: 90 189 179;
   --c-cool-soft: 46 116 110;
+  /* Ordered group palette (warm = top, cool = bottom), CVD-validated for the dark surface. */
+  --c-g1: 217 89 38; /* top 1%  */
+  --c-g2: 201 133 0; /* next 9% */
+  --c-g3: 25 158 112; /* middle 40% */
+  --c-g4: 57 135 229; /* bottom 50% */
 }
 
 .light {
@@ -42,6 +47,11 @@
   --c-accent-soft: 226 178 120;
   --c-cool: 20 132 122;
   --c-cool-soft: 150 205 199;
+  /* Ordered group palette (warm = top, cool = bottom), CVD-validated for the light surface. */
+  --c-g1: 235 104 52; /* top 1%  */
+  --c-g2: 237 161 0; /* next 9% */
+  --c-g3: 27 175 122; /* middle 40% */
+  --c-g4: 42 120 214; /* bottom 50% */
 }
 
 @layer base {

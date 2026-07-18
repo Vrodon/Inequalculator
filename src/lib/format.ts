@@ -42,16 +42,6 @@ export function formatMultiple(x: number): string {
   }).format(rounded)}×`;
 }
 
-/** A ratio for "per person" comparisons, capped so it never runs away visually. */
-export function formatRatio(x: number): string {
-  if (!Number.isFinite(x) || x >= 1000) return '>1,000×';
-  if (x >= 10) return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(x)}×`;
-  return `${new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  }).format(x)}×`;
-}
-
 /** The Gini coefficient to two decimals, e.g. 0.62. */
 export function formatGini(x: number): string {
   if (!Number.isFinite(x)) return '—';
@@ -65,4 +55,25 @@ export function formatGini(x: number): string {
 export function formatInt(x: number): string {
   if (!Number.isFinite(x)) return '—';
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(x);
+}
+
+/**
+ * A currency amount in compact form, e.g. 158e12 → "$158T" (en) / "158 Bio. €"
+ * scale (de). The magnitude suffix is localized by Intl; the symbol is prefixed.
+ */
+export function formatCurrencyCompact(value: number, symbol: string): string {
+  if (!Number.isFinite(value)) return '—';
+  const sign = value < 0 ? '-' : '';
+  const magnitude = new Intl.NumberFormat(locale, {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(Math.abs(value));
+  return `${sign}${symbol}${magnitude}`;
+}
+
+/** A household/people count in compact form, e.g. 1_986_975 → "2M", 62_802 → "63K". */
+export function formatCountCompact(n: number): string {
+  if (!Number.isFinite(n)) return '—';
+  if (Math.abs(n) < 1000) return formatInt(n);
+  return new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(n);
 }
