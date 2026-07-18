@@ -74,7 +74,9 @@
     "noteBalanced": "When assets and the wider economy grow at the same pace, the split holds: everyone gets richer together and each group keeps the same share of the whole."
   },
   "pie": {
-    "title": "Who owns the wealth",
+    "title_one": "Who owns the wealth after {{count}} year",
+    "title_other": "Who owns the wealth after {{count}} years",
+    "titleStart": "Who owns the wealth at the start",
     "caption": "Economy {{multiple}} larger than year 0",
     "captionStart": "Total wealth at year 0",
     "growthHint": "Each slice: share of total · ×growth since year 0",

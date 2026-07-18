@@ -173,7 +173,7 @@ export function GrowingPie() {
   return (
     <div className="card flex flex-col items-center p-5">
       <h2 className="mb-1 w-full text-sm font-semibold uppercase tracking-wide text-muted">
-        {t('pie.title')}
+        {selectedYear === 0 ? t('pie.titleStart') : t('pie.title', { count: selectedYear })}
       </h2>
 
       <div className="relative w-full max-w-[340px]">
