@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { useSimulation } from '../state/store';
-import { TAX_PRESETS } from '../data/groupPresets';
+import {
+  FLAT_STANDARDS,
+  THRESHOLD_STANDARDS,
+  PROGRESSIVE_STANDARDS,
+  progressiveBrackets,
+  type TaxType,
+} from '../data/groupPresets';
 import type { RedistributionTarget } from '../model/wealthModel';
 import { formatCountCompact, formatCurrencyCompact, formatRate } from '../lib/format';
 import { handleRovingKeys } from '../lib/a11y';
@@ -11,21 +17,34 @@ import { RangeSlider } from './primitives/RangeSlider';
 import { InfoDot } from './primitives/InfoDot';
 import { ChevronDownIcon } from './icons';
 
-const THRESHOLD_STEPS = [500e3, 1e6, 2e6, 5e6, 10e6, 20e6, 50e6, 100e6];
+const THRESHOLD_STEPS = [100e3, 250e3, 500e3, 1e6, 2e6, 5e6, 10e6, 20e6, 50e6, 100e6];
+const TAX_TYPES: TaxType[] = ['none', 'flat', 'threshold', 'progressive'];
 const REDIST: RedistributionTarget[] = ['bottom50', 'bottom90', 'all', 'none'];
 
+const nearestStep = (v: number) =>
+  THRESHOLD_STEPS.reduce(
+    (best, s, i) => (Math.abs(s - v) < Math.abs(THRESHOLD_STEPS[best] - v) ? i : best),
+    0,
+  );
+
 /**
- * The "What could change this?" section: pick a wealth-tax design (a real-world
- * preset or a custom flat/threshold tax) and watch it bend the curve.
+ * The wealth-tax panel. The user first picks a tax *type* (none / flat /
+ * threshold / progressive), then a real-world *standard* within that type, then
+ * fine-tunes with sliders. Choosing a standard fills the sliders; nudging a
+ * slider simply means the design no longer matches a standard.
  */
 export function WealthTax({ onOpenCaveats }: { onOpenCaveats: () => void }) {
   const { t } = useTranslation();
   const prefersReduced = useReducedMotion();
   const {
-    taxSelection,
-    setTaxSelection,
-    customTax,
-    setCustomTax,
+    taxType,
+    setTaxType,
+    flatTax,
+    setFlatTax,
+    thresholdTax,
+    setThresholdTax,
+    progressiveTax,
+    setProgressiveTax,
     redistribution,
     setRedistribution,
     taxActive,
@@ -35,12 +54,12 @@ export function WealthTax({ onOpenCaveats }: { onOpenCaveats: () => void }) {
   } = useSimulation();
   const [open, setOpen] = useState(true);
 
-  const selectedPreset = TAX_PRESETS.find((p) => p.id === taxSelection);
-  const stepIndex = THRESHOLD_STEPS.reduce(
-    (best, s, i) =>
-      Math.abs(s - customTax.threshold) < Math.abs(THRESHOLD_STEPS[best] - customTax.threshold) ? i : best,
-    0,
-  );
+  const rateFmt = (v: number) => (v === 0 ? t('tax.off') : `${formatRate(v, 2)}${t('tax.perYear')}`);
+  const money = (v: number) => formatCurrencyCompact(v, currencySymbol);
+
+  const bands = progressiveBrackets(progressiveTax.presetId, progressiveTax.scale)
+    .map((b) => t('tax.band', { rate: formatRate(b.rate, 1), threshold: money(b.threshold) }))
+    .join(' · ');
 
   return (
     <section className="card overflow-hidden">
@@ -74,96 +93,153 @@ export function WealthTax({ onOpenCaveats }: { onOpenCaveats: () => void }) {
             className="overflow-hidden"
           >
             <div className="space-y-4 px-5 pb-5">
-              {/* design picker */}
-              <div>
-                <span className="mb-2 block text-sm font-medium text-muted">{t('tax.design')}</span>
+              {/* 1) type selector */}
+              <Field label={t('tax.type')}>
                 <div
-                  className="flex flex-wrap gap-1.5"
                   role="radiogroup"
-                  aria-label={t('tax.design')}
+                  aria-label={t('tax.type')}
                   onKeyDown={handleRovingKeys}
+                  className="grid grid-cols-4 gap-1 rounded-control border border-line bg-surface p-1"
                 >
-                  {TAX_PRESETS.map((p) => (
-                    <TaxPill
-                      key={p.id}
-                      active={taxSelection === p.id}
-                      label={t(p.nameKey)}
-                      onClick={() => setTaxSelection(p.id)}
-                    />
+                  {TAX_TYPES.map((ty) => (
+                    <button
+                      key={ty}
+                      type="button"
+                      role="radio"
+                      aria-checked={taxType === ty}
+                      tabIndex={taxType === ty ? 0 : -1}
+                      onClick={() => setTaxType(ty)}
+                      className={clsx(
+                        'rounded-[0.55rem] px-1 py-2 text-xs font-semibold transition',
+                        taxType === ty
+                          ? 'bg-accent/15 text-text ring-1 ring-accent/40'
+                          : 'text-muted hover:text-text',
+                      )}
+                    >
+                      {t(`taxType.${ty}`)}
+                    </button>
                   ))}
-                  <TaxPill
-                    active={taxSelection === 'custom'}
-                    label={t('tax.custom')}
-                    onClick={() => setTaxSelection('custom')}
-                  />
                 </div>
-              </div>
+              </Field>
 
-              {/* selected preset description, or custom controls */}
-              {taxSelection === 'custom' ? (
+              {/* 2) type-specific standards + sliders */}
+              {taxType === 'none' && (
+                <p className="rounded-control border border-line bg-surface-2/50 p-3 text-sm leading-relaxed text-muted">
+                  {t('tax.noneNote')}
+                </p>
+              )}
+
+              {taxType === 'flat' && (
                 <div className="space-y-4 rounded-control border border-line bg-surface-2/50 p-4">
-                  <div
-                    className="flex gap-1.5"
-                    role="radiogroup"
-                    aria-label={t('tax.style')}
-                    onKeyDown={handleRovingKeys}
-                  >
-                    <TaxPill
-                      active={customTax.style === 'flatOnGroups'}
-                      label={t('tax.styleFlat')}
-                      onClick={() => setCustomTax({ style: 'flatOnGroups' })}
-                    />
-                    <TaxPill
-                      active={customTax.style === 'marginal'}
-                      label={t('tax.styleThreshold')}
-                      onClick={() => setCustomTax({ style: 'marginal' })}
-                    />
-                  </div>
+                  <Standards label={t('tax.standard')}>
+                    {FLAT_STANDARDS.map((s) => (
+                      <TaxPill
+                        key={s.id}
+                        active={flatTax.rate === s.rate && flatTax.scope === s.scope}
+                        label={t(s.labelKey)}
+                        onClick={() => setFlatTax({ rate: s.rate, scope: s.scope })}
+                      />
+                    ))}
+                  </Standards>
                   <RangeSlider
                     label={t('tax.rate')}
-                    value={customTax.rate}
+                    value={flatTax.rate}
                     min={0}
                     max={5}
                     step={0.25}
-                    onChange={(v) => setCustomTax({ rate: v })}
-                    formatValue={(v) => (v === 0 ? t('tax.off') : `${formatRate(v, 2)}${t('tax.perYear')}`)}
+                    onChange={(v) => setFlatTax({ rate: v })}
+                    formatValue={rateFmt}
                   />
-                  {customTax.style === 'marginal' && (
-                    <div className="space-y-2">
-                      <RangeSlider
-                        label={t('tax.threshold')}
-                        value={stepIndex}
-                        min={0}
-                        max={THRESHOLD_STEPS.length - 1}
-                        step={1}
-                        onChange={(i) => setCustomTax({ threshold: THRESHOLD_STEPS[Math.round(i)] })}
-                        formatValue={(i) =>
-                          formatCurrencyCompact(THRESHOLD_STEPS[Math.round(i)], currencySymbol)
-                        }
+                  <Field label={t('tax.appliesTo')}>
+                    <div
+                      role="radiogroup"
+                      aria-label={t('tax.appliesTo')}
+                      onKeyDown={handleRovingKeys}
+                      className="flex gap-1.5"
+                    >
+                      <TaxPill
+                        active={flatTax.scope === 'top1'}
+                        label={t('groups.top1')}
+                        onClick={() => setFlatTax({ scope: 'top1' })}
                       />
-                      <p className="text-xs leading-relaxed text-faint">{t('tax.thresholdNote')}</p>
+                      <TaxPill
+                        active={flatTax.scope === 'top10'}
+                        label={t('groups.top10')}
+                        onClick={() => setFlatTax({ scope: 'top10' })}
+                      />
                     </div>
-                  )}
+                  </Field>
                 </div>
-              ) : (
-                selectedPreset && (
-                  <div className="flex items-start gap-1.5 rounded-control border border-line bg-surface-2/50 p-3">
-                    <p className="text-sm leading-relaxed text-muted">{t(selectedPreset.descKey)}</p>
-                    {selectedPreset.source && (
-                      <InfoDot title={t(selectedPreset.nameKey)} source={selectedPreset.source} placement="end" />
-                    )}
-                  </div>
-                )
               )}
 
-              {/* redistribution + live readout (only when a tax is active) */}
+              {taxType === 'threshold' && (
+                <div className="space-y-4 rounded-control border border-line bg-surface-2/50 p-4">
+                  <Standards label={t('tax.standard')}>
+                    {THRESHOLD_STANDARDS.map((s) => (
+                      <TaxPill
+                        key={s.id}
+                        active={thresholdTax.rate === s.rate && thresholdTax.threshold === s.threshold}
+                        label={t(s.labelKey)}
+                        onClick={() => setThresholdTax({ rate: s.rate, threshold: s.threshold })}
+                      />
+                    ))}
+                  </Standards>
+                  <RangeSlider
+                    label={t('tax.rate')}
+                    value={thresholdTax.rate}
+                    min={0}
+                    max={5}
+                    step={0.25}
+                    onChange={(v) => setThresholdTax({ rate: v })}
+                    formatValue={rateFmt}
+                  />
+                  <div className="space-y-2">
+                    <RangeSlider
+                      label={t('tax.appliesAbove')}
+                      value={nearestStep(thresholdTax.threshold)}
+                      min={0}
+                      max={THRESHOLD_STEPS.length - 1}
+                      step={1}
+                      onChange={(i) => setThresholdTax({ threshold: THRESHOLD_STEPS[Math.round(i)] })}
+                      formatValue={(i) => money(THRESHOLD_STEPS[Math.round(i)])}
+                    />
+                    <p className="text-xs leading-relaxed text-faint">{t('tax.thresholdNote')}</p>
+                  </div>
+                </div>
+              )}
+
+              {taxType === 'progressive' && (
+                <div className="space-y-4 rounded-control border border-line bg-surface-2/50 p-4">
+                  <Standards label={t('tax.standard')}>
+                    {PROGRESSIVE_STANDARDS.map((s) => (
+                      <TaxPill
+                        key={s.id}
+                        active={progressiveTax.presetId === s.id}
+                        label={t(s.labelKey)}
+                        onClick={() => setProgressiveTax({ presetId: s.id, scale: 1 })}
+                      />
+                    ))}
+                  </Standards>
+                  <RangeSlider
+                    label={t('tax.overallRate')}
+                    value={progressiveTax.scale}
+                    min={0.5}
+                    max={2}
+                    step={0.1}
+                    onChange={(v) => setProgressiveTax({ scale: v })}
+                    formatValue={(v) => `×${v.toFixed(1)}`}
+                  />
+                  <p className="text-xs leading-relaxed text-faint">{bands}</p>
+                </div>
+              )}
+
+              {/* 3) redistribution + live readout (only when a tax is active) */}
               {taxActive && (
                 <>
-                  <div>
-                    <div className="mb-2 flex items-center gap-0.5">
-                      <span className="text-sm font-medium text-muted">{t('tax.redistribute')}</span>
-                      <InfoDot title={t('tax.redistribute')} note={t('tax.redistributeHelp')} />
-                    </div>
+                  <Field
+                    label={t('tax.redistribute')}
+                    hint={<InfoDot title={t('tax.redistribute')} note={t('tax.redistributeHelp')} />}
+                  >
                     <div
                       role="radiogroup"
                       aria-label={t('tax.redistribute')}
@@ -189,10 +265,10 @@ export function WealthTax({ onOpenCaveats }: { onOpenCaveats: () => void }) {
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </Field>
 
                   <div className="flex items-center justify-between gap-3 rounded-control bg-surface-2/60 px-4 py-3">
-                    <Readout label={t('tax.revenue')} value={formatCurrencyCompact(stats.taxThisYear, currencySymbol)} />
+                    <Readout label={t('tax.revenue')} value={money(stats.taxThisYear)} />
                     <div className="h-8 w-px bg-line" />
                     <Readout label={t('tax.affected')} value={formatCountCompact(householdsTaxed)} />
                   </div>
@@ -214,15 +290,32 @@ export function WealthTax({ onOpenCaveats }: { onOpenCaveats: () => void }) {
   );
 }
 
-function TaxPill({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
+/** A labeled block: a small muted label (optionally with a hint) above its content. */
+function Field({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-0.5">
+        <span className="text-sm font-medium text-muted">{label}</span>
+        {hint}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/** The "Standard" label with its wrapping pill row. */
+function Standards({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <span className="mb-2 block text-xs font-medium text-muted">{label}</span>
+      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={label} onKeyDown={handleRovingKeys}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function TaxPill({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
   return (
     <button
       type="button"

@@ -87,15 +87,15 @@
   },
   "tax": {
     "title": "Wealth tax",
-    "subtitle": "Choose a tax design and watch it bend the curve.",
-    "design": "Tax design",
-    "custom": "Custom",
-    "style": "Style",
-    "styleFlat": "Flat on the top 10%",
-    "styleThreshold": "Marginal above a threshold",
+    "subtitle": "Pick a type, choose a standard, then fine-tune.",
+    "type": "Tax type",
+    "standard": "Standard",
     "rate": "Rate",
-    "threshold": "Threshold",
-    "brackets": "Brackets",
+    "appliesTo": "Applies to",
+    "appliesAbove": "Applies above",
+    "overallRate": "Overall rate",
+    "band": "{{rate}} above {{threshold}}",
+    "noneNote": "Wealth compounds untaxed.",
     "redistribute": "Redistribute revenue to",
     "redistributeHelp": "Where the collected tax goes each year. It is a transfer within the private economy unless set to “not redistributed”.",
     "revenue": "Revenue raised",
@@ -110,6 +110,20 @@
       "all": "Everyone",
       "none": "Not redistributed"
     }
+  },
+  "taxType": {
+    "none": "No tax",
+    "flat": "Flat",
+    "threshold": "Threshold",
+    "progressive": "Progressive"
+  },
+  "taxStd": {
+    "flatTop10": "1% · Top 10%",
+    "threshold10m": "2% above 10M",
+    "zucman": "Zucman · 100M",
+    "swiss": "Swiss · 100K",
+    "warren": "Warren 2% / 3%",
+    "spain": "Spain 0.2–3.5%"
   },
   "taxPresets": {
     "none": { "name": "No tax", "desc": "Wealth compounds untaxed." },

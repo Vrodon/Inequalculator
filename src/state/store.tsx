@@ -22,17 +22,15 @@ import {
 import {
   GROUP_DEFS,
   GROUP_PRESETS,
-  TAX_PRESETS,
+  progressiveBrackets,
   type GroupCountryPreset,
   type GroupKey,
   type GroupPresetId,
-  type TaxPresetId,
+  type TaxType,
 } from '../data/groupPresets';
 import { clamp } from '../lib/math';
 
 export type View = 'simple' | 'advanced';
-export type TaxSelection = TaxPresetId | 'custom';
-export type CustomTaxStyle = 'flatOnGroups' | 'marginal';
 
 interface State {
   country: GroupPresetId; // supplies the currency anchor
@@ -41,8 +39,10 @@ interface State {
   economyGrowth: number; // g
   years: number;
   shares: Record<GroupKey, number>; // percent, sums to 100
-  taxSelection: TaxSelection;
-  customTax: { style: CustomTaxStyle; rate: number; threshold: number };
+  taxType: TaxType;
+  flatTax: { rate: number; scope: 'top1' | 'top10' };
+  thresholdTax: { rate: number; threshold: number };
+  progressiveTax: { presetId: string; scale: number };
   redistribution: RedistributionTarget;
   selectedYear: number;
   playing: boolean;
@@ -59,8 +59,10 @@ type Action =
   | { type: 'setYear'; year: number }
   | { type: 'setPlaying'; playing: boolean }
   | { type: 'setView'; view: View }
-  | { type: 'setTaxSelection'; selection: TaxSelection }
-  | { type: 'setCustomTax'; patch: Partial<State['customTax']> }
+  | { type: 'setTaxType'; taxType: TaxType }
+  | { type: 'setFlatTax'; patch: Partial<State['flatTax']> }
+  | { type: 'setThresholdTax'; patch: Partial<State['thresholdTax']> }
+  | { type: 'setProgressiveTax'; patch: Partial<State['progressiveTax']> }
   | { type: 'setRedistribution'; target: RedistributionTarget }
   | { type: 'reset' };
 
@@ -82,8 +84,10 @@ function initialState(): State {
     economyGrowth: GROUP_PRESETS.US.economyGrowth.value,
     years: 50,
     shares: sharesFromPreset('US'),
-    taxSelection: 'none',
-    customTax: { style: 'marginal', rate: 2, threshold: 10_000_000 },
+    taxType: 'none',
+    flatTax: { rate: 1, scope: 'top10' },
+    thresholdTax: { rate: 2, threshold: 10_000_000 },
+    progressiveTax: { presetId: 'warren', scale: 1 },
     redistribution: 'all',
     selectedYear: 50,
     playing: false,
@@ -141,10 +145,14 @@ function reducer(state: State, action: Action): State {
       return { ...state, playing: action.playing };
     case 'setView':
       return { ...state, view: action.view };
-    case 'setTaxSelection':
-      return { ...state, taxSelection: action.selection };
-    case 'setCustomTax':
-      return { ...state, taxSelection: 'custom', customTax: { ...state.customTax, ...action.patch } };
+    case 'setTaxType':
+      return { ...state, taxType: action.taxType };
+    case 'setFlatTax':
+      return { ...state, flatTax: { ...state.flatTax, ...action.patch } };
+    case 'setThresholdTax':
+      return { ...state, thresholdTax: { ...state.thresholdTax, ...action.patch } };
+    case 'setProgressiveTax':
+      return { ...state, progressiveTax: { ...state.progressiveTax, ...action.patch } };
     case 'setRedistribution':
       return { ...state, redistribution: action.target };
     case 'reset': {
@@ -156,7 +164,10 @@ function reducer(state: State, action: Action): State {
         economyGrowth: p.economyGrowth.value,
         years: 50,
         shares: sharesFromPreset(state.country),
-        taxSelection: 'none',
+        taxType: 'none',
+        flatTax: { rate: 1, scope: 'top10' },
+        thresholdTax: { rate: 2, threshold: 10_000_000 },
+        progressiveTax: { presetId: 'warren', scale: 1 },
         redistribution: 'all',
         selectedYear: 50,
         playing: false,
@@ -167,15 +178,32 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-function resolveTax(selection: TaxSelection, customTax: State['customTax']): TaxSpec {
-  if (selection === 'custom') {
-    if (customTax.style === 'flatOnGroups') {
-      return { style: 'flatOnGroups', rate: customTax.rate, taxedGroupKeys: ['top1', 'next9'] };
-    }
-    return { style: 'marginal', brackets: [{ threshold: customTax.threshold, rate: customTax.rate }] };
+function resolveTax(
+  taxType: TaxType,
+  flatTax: State['flatTax'],
+  thresholdTax: State['thresholdTax'],
+  progressiveTax: State['progressiveTax'],
+): TaxSpec {
+  switch (taxType) {
+    case 'flat':
+      return {
+        style: 'flatOnGroups',
+        rate: flatTax.rate,
+        taxedGroupKeys: flatTax.scope === 'top10' ? ['top1', 'next9'] : ['top1'],
+      };
+    case 'threshold':
+      return {
+        style: 'marginal',
+        brackets: [{ threshold: thresholdTax.threshold, rate: thresholdTax.rate }],
+      };
+    case 'progressive':
+      return {
+        style: 'marginal',
+        brackets: progressiveBrackets(progressiveTax.presetId, progressiveTax.scale),
+      };
+    default:
+      return { style: 'none' };
   }
-  const preset = TAX_PRESETS.find((t) => t.id === selection);
-  return preset ? preset.build() : { style: 'none' };
 }
 
 interface StoreValue extends State {
@@ -197,8 +225,10 @@ interface StoreValue extends State {
   pause: () => void;
   togglePlay: () => void;
   setView: (view: View) => void;
-  setTaxSelection: (selection: TaxSelection) => void;
-  setCustomTax: (patch: Partial<State['customTax']>) => void;
+  setTaxType: (taxType: TaxType) => void;
+  setFlatTax: (patch: Partial<State['flatTax']>) => void;
+  setThresholdTax: (patch: Partial<State['thresholdTax']>) => void;
+  setProgressiveTax: (patch: Partial<State['progressiveTax']>) => void;
   setRedistribution: (target: RedistributionTarget) => void;
   reset: () => void;
 }
@@ -224,8 +254,8 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
   }, [state.shares, state.economyGrowth, state.assetReturn]);
 
   const tax = useMemo(
-    () => resolveTax(state.taxSelection, state.customTax),
-    [state.taxSelection, state.customTax],
+    () => resolveTax(state.taxType, state.flatTax, state.thresholdTax, state.progressiveTax),
+    [state.taxType, state.flatTax, state.thresholdTax, state.progressiveTax],
   );
 
   const result = useMemo(
@@ -302,7 +332,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       stats,
       startStats,
       taxSpec: tax,
-      taxActive: state.taxSelection !== 'none',
+      taxActive: state.taxType !== 'none',
       householdsTaxed,
       selectCountry: (id) => dispatch({ type: 'selectCountry', id }),
       markCustom: () => dispatch({ type: 'markCustom' }),
@@ -313,8 +343,10 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       pause: () => dispatch({ type: 'setPlaying', playing: false }),
       togglePlay: () => dispatch({ type: 'setPlaying', playing: !state.playing }),
       setView: (view) => dispatch({ type: 'setView', view }),
-      setTaxSelection: (selection) => dispatch({ type: 'setTaxSelection', selection }),
-      setCustomTax: (patch) => dispatch({ type: 'setCustomTax', patch }),
+      setTaxType: (taxType) => dispatch({ type: 'setTaxType', taxType }),
+      setFlatTax: (patch) => dispatch({ type: 'setFlatTax', patch }),
+      setThresholdTax: (patch) => dispatch({ type: 'setThresholdTax', patch }),
+      setProgressiveTax: (patch) => dispatch({ type: 'setProgressiveTax', patch }),
       setRedistribution: (target) => dispatch({ type: 'setRedistribution', target }),
       reset: () => dispatch({ type: 'reset' }),
     }),

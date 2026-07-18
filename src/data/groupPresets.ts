@@ -2,6 +2,7 @@ import type { Source, Sourced } from './presets';
 import {
   assignReturns,
   type CountryAnchor,
+  type TaxBracket,
   type TaxSpec,
   type WealthGroup,
   type WealthModelParams,
@@ -337,3 +338,70 @@ export const TAX_PRESETS: TaxPreset[] = [
     },
   },
 ];
+
+// --- Type-organized standards for the wealth-tax picker -----------------------
+
+/**
+ * The picker is organized by the kind of tax first. Besides "no tax" there are
+ * three families, each with a few real-world "standards" the user can start from
+ * and then fine-tune with sliders:
+ *   flat        — a flat annual rate on a top group's whole wealth
+ *   threshold   — a marginal rate above a single wealth threshold
+ *   progressive — rising rates across several bands (the UI scales them together)
+ */
+export type TaxType = 'none' | 'flat' | 'threshold' | 'progressive';
+
+export interface FlatStandard {
+  id: string;
+  labelKey: string;
+  rate: number;
+  scope: 'top1' | 'top10';
+}
+export interface ThresholdStandard {
+  id: string;
+  labelKey: string;
+  rate: number;
+  threshold: number;
+}
+export interface ProgressiveStandard {
+  id: string;
+  labelKey: string;
+  brackets: TaxBracket[];
+}
+
+export const FLAT_STANDARDS: FlatStandard[] = [
+  { id: 'flatTop10', labelKey: 'taxStd.flatTop10', rate: 1, scope: 'top10' },
+];
+
+export const THRESHOLD_STANDARDS: ThresholdStandard[] = [
+  { id: 'threshold10m', labelKey: 'taxStd.threshold10m', rate: 2, threshold: 10e6 },
+  { id: 'zucman', labelKey: 'taxStd.zucman', rate: 2, threshold: 100e6 },
+  { id: 'swiss', labelKey: 'taxStd.swiss', rate: 0.6, threshold: 100e3 },
+];
+
+export const PROGRESSIVE_STANDARDS: ProgressiveStandard[] = [
+  {
+    id: 'warren',
+    labelKey: 'taxStd.warren',
+    brackets: [
+      { threshold: 50e6, rate: 2 },
+      { threshold: 1e9, rate: 3 },
+    ],
+  },
+  {
+    id: 'spain',
+    labelKey: 'taxStd.spain',
+    brackets: [
+      { threshold: 700e3, rate: 0.2 },
+      { threshold: 3e6, rate: 1.0 },
+      { threshold: 10e6, rate: 2.0 },
+      { threshold: 50e6, rate: 3.5 },
+    ],
+  },
+];
+
+/** A progressive standard's bands with every rate multiplied by `scale`. */
+export function progressiveBrackets(presetId: string, scale: number): TaxBracket[] {
+  const std = PROGRESSIVE_STANDARDS.find((s) => s.id === presetId) ?? PROGRESSIVE_STANDARDS[0];
+  return std.brackets.map((b) => ({ threshold: b.threshold, rate: b.rate * scale }));
+}
