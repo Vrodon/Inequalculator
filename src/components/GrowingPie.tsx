@@ -29,6 +29,7 @@ function Slice({
   rMV,
   fill,
   label,
+  subLabel,
   showLabel,
   prefersReduced,
 }: {
@@ -37,6 +38,7 @@ function Slice({
   rMV: MotionValue<number>;
   fill: string;
   label: string;
+  subLabel?: string;
   showLabel: boolean;
   prefersReduced: boolean;
 }) {
@@ -63,26 +65,49 @@ function Slice({
   );
   const cx = useTransform(centroid, (c) => c[0]);
   const cy = useTransform(centroid, (c) => c[1]);
+  // When a sub-label (the ×growth tag) is shown, lift the main share label so
+  // the two lines stack neatly around the slice centroid.
+  const cyMain = useTransform(cy, (v) => (subLabel ? v - 7 : v));
+  const cySub = useTransform(cy, (v) => v + 9);
 
   return (
     <>
       <motion.path d={d} fill={fill} />
       {showLabel && (
-        <motion.text
-          x={cx}
-          y={cy}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontSize={13}
-          fontWeight={700}
-          fill="#fff"
-          stroke="rgb(0 0 0 / 0.4)"
-          strokeWidth={3}
-          paintOrder="stroke"
-          className="tnum"
-        >
-          {label}
-        </motion.text>
+        <>
+          <motion.text
+            x={cx}
+            y={cyMain}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={13}
+            fontWeight={700}
+            fill="#fff"
+            stroke="rgb(0 0 0 / 0.4)"
+            strokeWidth={3}
+            paintOrder="stroke"
+            className="tnum"
+          >
+            {label}
+          </motion.text>
+          {subLabel && (
+            <motion.text
+              x={cx}
+              y={cySub}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize={11}
+              fontWeight={600}
+              fill="#fff"
+              stroke="rgb(0 0 0 / 0.4)"
+              strokeWidth={3}
+              paintOrder="stroke"
+              className="tnum"
+            >
+              {subLabel}
+            </motion.text>
+          )}
+        </>
       )}
     </>
   );
@@ -100,7 +125,7 @@ export function GrowingPie() {
 
   const idx = Math.min(selectedYear, result.series.length - 1);
   const point = result.series[idx];
-  const groups = point.groups; // richest first
+  const groups = stats.groups; // richest first; carries each group's growthMultiple
   const ratio = result.series[0].total > 0 ? point.total / result.series[0].total : 1;
   const outerTarget = clamp(BASE_R * Math.sqrt(ratio), BASE_R, MAX_OUTER);
 
@@ -110,15 +135,20 @@ export function GrowingPie() {
     else rMV.set(outerTarget);
   }, [outerTarget, prefersReduced, rMV]);
 
-  // Cumulative fractions for each slice.
+  // Cumulative fractions for each slice, plus each group's growth since year 0.
   let acc = 0;
   const slices = groups.map((g) => {
     const start = acc;
     acc += g.share;
-    return { key: g.key as GroupKey, start, end: acc, share: g.share };
+    return { key: g.key as GroupKey, start, end: acc, share: g.share, growthMultiple: g.growthMultiple };
   });
 
+  // The per-group ×growth tags only carry meaning once time has passed (at year
+  // 0 every multiple is ×1), so they appear from year 1 onward.
+  const showSub = selectedYear > 0;
+
   const shareByKey = (k: GroupKey) => groups.find((g) => g.key === k)?.share ?? 0;
+  const multByKey = (k: GroupKey) => groups.find((g) => g.key === k)?.growthMultiple ?? 1;
   const a11y = t('pie.a11y', {
     year: selectedYear,
     multiple: formatMultiple(stats.economyMultiple),
@@ -126,6 +156,10 @@ export function GrowingPie() {
     next9: formatPercent(shareByKey('next9')),
     middle40: formatPercent(shareByKey('middle40')),
     bottom50: formatPercent(shareByKey('bottom50')),
+    top1x: formatMultiple(multByKey('top1')),
+    next9x: formatMultiple(multByKey('next9')),
+    middle40x: formatMultiple(multByKey('middle40')),
+    bottom50x: formatMultiple(multByKey('bottom50')),
   });
 
   return (
@@ -154,6 +188,7 @@ export function GrowingPie() {
                 rMV={rMV}
                 fill={groupFill(s.key)}
                 label={formatPercent(s.share)}
+                subLabel={showSub ? formatMultiple(s.growthMultiple) : undefined}
                 showLabel={s.share > 0.06}
                 prefersReduced={!!prefersReduced}
               />
@@ -173,13 +208,20 @@ export function GrowingPie() {
         </svg>
       </div>
 
-      <p className="mb-3 mt-1 text-center text-sm text-muted">
+      <p className={`mt-1 text-center text-sm text-muted ${showSub ? 'mb-1' : 'mb-3'}`}>
         {selectedYear === 0
           ? t('pie.captionStart')
           : t('pie.caption', { multiple: formatMultiple(stats.economyMultiple) })}
       </p>
+      {showSub && <p className="mb-3 text-center text-xs text-faint">{t('pie.growthHint')}</p>}
 
-      <GroupLegend groups={groups.map((g) => ({ key: g.key as GroupKey, share: g.share }))} />
+      <GroupLegend
+        groups={groups.map((g) => ({
+          key: g.key as GroupKey,
+          share: g.share,
+          growthMultiple: showSub ? g.growthMultiple : undefined,
+        }))}
+      />
     </div>
   );
 }
