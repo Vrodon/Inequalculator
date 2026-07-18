@@ -56,7 +56,6 @@ type Action =
   | { type: 'markCustom' }
   | { type: 'setReturn'; key: CoreReturnKey; value: number }
   | { type: 'setShare'; key: GroupKey; value: number }
-  | { type: 'setYears'; value: number }
   | { type: 'setYear'; year: number }
   | { type: 'setPlaying'; playing: boolean }
   | { type: 'setView'; view: View }
@@ -81,12 +80,12 @@ function initialState(): State {
     custom: false,
     assetReturn: GROUP_PRESETS.US.assetReturn.value,
     economyGrowth: GROUP_PRESETS.US.economyGrowth.value,
-    years: 40,
+    years: 50,
     shares: sharesFromPreset('US'),
     taxSelection: 'none',
     customTax: { style: 'marginal', rate: 2, threshold: 10_000_000 },
-    redistribution: 'bottom50',
-    selectedYear: 40,
+    redistribution: 'all',
+    selectedYear: 50,
     playing: false,
     view: 'simple',
   };
@@ -132,10 +131,6 @@ function reducer(state: State, action: Action): State {
       return { ...state, [action.key]: action.value, custom: true };
     case 'setShare':
       return { ...state, shares: updateShares(state.shares, action.key, action.value), custom: true };
-    case 'setYears': {
-      const years = Math.round(action.value);
-      return { ...state, years, selectedYear: clamp(state.selectedYear, 0, years) };
-    }
     case 'setYear': {
       const y = clamp(Math.round(action.year), 0, state.years);
       if (y === state.selectedYear) return state;
@@ -159,11 +154,11 @@ function reducer(state: State, action: Action): State {
         custom: false,
         assetReturn: p.assetReturn.value,
         economyGrowth: p.economyGrowth.value,
-        years: 40,
+        years: 50,
         shares: sharesFromPreset(state.country),
         taxSelection: 'none',
-        redistribution: 'bottom50',
-        selectedYear: 40,
+        redistribution: 'all',
+        selectedYear: 50,
         playing: false,
       };
     }
@@ -197,7 +192,6 @@ interface StoreValue extends State {
   markCustom: () => void;
   setReturn: (key: CoreReturnKey, value: number) => void;
   setShare: (key: GroupKey, value: number) => void;
-  setYears: (value: number) => void;
   setYear: (year: number) => void;
   play: () => void;
   pause: () => void;
@@ -314,7 +308,6 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       markCustom: () => dispatch({ type: 'markCustom' }),
       setReturn: (key, value2) => dispatch({ type: 'setReturn', key, value: value2 }),
       setShare: (key, value2) => dispatch({ type: 'setShare', key, value: value2 }),
-      setYears: (value2) => dispatch({ type: 'setYears', value: value2 }),
       setYear: (year) => dispatch({ type: 'setYear', year }),
       play: () => dispatch({ type: 'setPlaying', playing: true }),
       pause: () => dispatch({ type: 'setPlaying', playing: false }),

@@ -8,6 +8,8 @@ import {
   formatGini,
   formatMultiple,
   formatPercent,
+  formatShare,
+  formatShareFine,
 } from '../lib/format';
 
 const pct0 = (v: number) => formatPercent(v, 0);
@@ -22,23 +24,47 @@ export function StatCards() {
 
   const fmtCurrency = (v: number) => formatCurrencyCompact(v, currencySymbol);
 
+  const bottom50 = stats.groups.find((g) => g.key === 'bottom50');
+  const bottom50StartShare = startStats.groups.find((g) => g.key === 'bottom50')?.share ?? 0;
+
+  // Which way the bottom half's share moved decides the story: shrinking (asset
+  // return above economy growth), growing (economy above assets), or holding
+  // (the two in step). The threshold ignores sub-0.01-point floating-point wobble.
+  const shareDelta = (bottom50?.share ?? 0) - bottom50StartShare;
+  const regime = shareDelta < -1e-4 ? 'concentrating' : shareDelta > 1e-4 ? 'equalizing' : 'balanced';
+
+  const shareVars = {
+    multiple: formatMultiple(stats.economyMultiple),
+    bottom50x: formatMultiple(bottom50?.growthMultiple ?? 1),
+    top1Start: formatShare(startStats.topGroupShare),
+    top1Now: formatShare(stats.topGroupShare),
+    bottom50Start: formatShareFine(bottom50StartShare),
+    bottom50Now: formatShareFine(bottom50?.share ?? 0),
+  };
+
   const readout =
     selectedYear === 0
       ? t('readout.start', {
-          top1: pct0(startStats.topGroupShare),
-          top10: pct0(startStats.topTailShare),
+          top1: formatShare(startStats.topGroupShare),
+          bottom50: formatShareFine(bottom50StartShare),
         })
-      : t('readout.main', {
-          multiple: formatMultiple(stats.economyMultiple),
-          top1: pct0(stats.topGroupShare),
-          top10: pct0(stats.topTailShare),
-        });
+      : t(regime === 'balanced' ? 'readout.mainBalanced' : 'readout.main', shareVars);
+
+  const note = t(
+    regime === 'concentrating'
+      ? 'readout.noteConcentrating'
+      : regime === 'equalizing'
+        ? 'readout.noteEqualizing'
+        : 'readout.noteBalanced',
+  );
 
   return (
     <div className="space-y-3">
       <div className="card border-accent/30 bg-accent/[0.06] p-4">
         <p className="text-[15px] font-medium leading-snug text-text">{readout}</p>
-        <p className="mt-1.5 text-xs leading-relaxed text-muted">{t('readout.note')}</p>
+        {selectedYear > 0 && (
+          <p className="mt-1.5 text-xs leading-relaxed text-muted">{note}</p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">

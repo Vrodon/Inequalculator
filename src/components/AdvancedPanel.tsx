@@ -11,7 +11,7 @@ const pctValue = (v: number) => `${Math.round(v * 10) / 10}%`;
 /** The extra sliders revealed in the Advanced view. */
 function AdvancedControls() {
   const { t } = useTranslation();
-  const { shares, setShare, years, setYears } = useSimulation();
+  const { shares, setShare } = useSimulation();
 
   return (
     <div className="space-y-5">
@@ -49,19 +49,6 @@ function AdvancedControls() {
       <div className="flex items-center justify-between rounded-control bg-surface-2/60 px-4 py-2.5">
         <span className="text-sm text-muted">{t('advanced.shareMiddle40')}</span>
         <span className="tnum text-sm font-semibold text-text">{pctValue(shares.middle40)}</span>
-      </div>
-
-      <div className="border-t border-line pt-4">
-        <RangeSlider
-          label={t('advanced.timeHorizon')}
-          value={years}
-          min={10}
-          max={50}
-          step={1}
-          onChange={(v) => setYears(v)}
-          formatValue={(v) => t('units.years', { count: Math.round(v) })}
-          help={t('advanced.timeHorizonHelp')}
-        />
       </div>
 
       <p className="rounded-control border border-line bg-surface-2/50 px-3 py-2.5 text-xs leading-relaxed text-muted">

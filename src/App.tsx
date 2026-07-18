@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { REPO_CONFIGURED, REPO_URL } from './config';
 import { CountrySwitch } from './components/CountrySwitch';
 import { GrowingPie } from './components/GrowingPie';
+import { YearScrubber } from './components/YearScrubber';
 import { StatCards } from './components/StatCards';
 import { Controls } from './components/Controls';
 import { DivergenceChart } from './components/DivergenceChart';
@@ -53,6 +54,7 @@ export function App() {
         <main className="grid items-start gap-4 lg:grid-cols-2">
           <div className="space-y-4">
             <GrowingPie />
+            <YearScrubber />
             <StatCards />
           </div>
           <div className="space-y-4">

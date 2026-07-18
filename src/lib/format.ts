@@ -20,6 +20,32 @@ export function formatPercent(fraction: number, digits = 0): string {
   }).format(fraction);
 }
 
+/**
+ * A wealth *share* (0–1) as a percentage. Like formatPercent, but shows one
+ * decimal for a tiny-but-nonzero share (below 1%) so a group that still owns,
+ * say, 0.5% doesn't collapse to a misleading "0%" — which matters exactly for
+ * the bottom 50% after decades of r > g.
+ */
+export function formatShare(fraction: number): string {
+  if (!Number.isFinite(fraction)) return '—';
+  if (fraction > 0 && fraction < 0.01) return formatPercent(fraction, 1);
+  return formatPercent(fraction, 0);
+}
+
+/**
+ * A share (0–1) with up to one decimal and no trailing zero: 0.025 → "2.5%",
+ * 0.05 → "5%", 0.005 → "0.5%". Used in the readout where the bottom half's small
+ * share needs its decimal to read honestly (2.5% → 0.5%), not rounded to whole.
+ */
+export function formatShareFine(fraction: number): string {
+  if (!Number.isFinite(fraction)) return '—';
+  return new Intl.NumberFormat(locale, {
+    style: 'percent',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }).format(fraction);
+}
+
 /** A raw percentage value (already in %), e.g. 6.5 → "6.5%". */
 export function formatRate(value: number, digits = 1): string {
   if (!Number.isFinite(value)) return '—';

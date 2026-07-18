@@ -3,7 +3,7 @@ import { arc as d3arc } from 'd3-shape';
 import { motion, useReducedMotion, useSpring, useTransform, type MotionValue } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useSimulation } from '../state/store';
-import { formatMultiple, formatPercent } from '../lib/format';
+import { formatMultiple, formatPercent, formatShare } from '../lib/format';
 import { groupFill } from '../lib/groupColors';
 import { clamp } from '../lib/math';
 import type { GroupKey } from '../data/groupPresets';
@@ -11,8 +11,12 @@ import { GroupLegend } from './primitives/GroupLegend';
 
 const VIEW = 320;
 const CENTER = VIEW / 2;
-const MAX_OUTER = 132;
+const MAX_OUTER = 140;
 const BASE_R = 58;
+// The donut reaches MAX_OUTER at this total-wealth multiple; beyond it the radius
+// holds. Set high so the donut keeps visibly growing through 10×, 20×, 50×.
+const CAP_MULTIPLE = 80;
+const GROWTH_SCALE = (MAX_OUTER - BASE_R) / Math.log(CAP_MULTIPLE);
 const INNER_RATIO = 0.6;
 const TAU = Math.PI * 2;
 const SPRING = { stiffness: 140, damping: 22, mass: 0.8 };
@@ -114,9 +118,11 @@ function Slice({
 }
 
 /**
- * The hero visualization: a donut whose outer radius is area-proportional to
- * total wealth (radius ∝ √total), split into the wealth groups. Everything
- * morphs with spring physics as the country, sliders, tax or year change.
+ * The hero visualization: a donut whose outer radius grows with total wealth on
+ * a log scale — so it keeps expanding steadily as the economy compounds to 10×,
+ * 20×, 50×, instead of saturating early — split into the wealth groups.
+ * Everything morphs with spring physics as the country, sliders, tax or year
+ * change.
  */
 export function GrowingPie() {
   const { t } = useTranslation();
@@ -127,7 +133,9 @@ export function GrowingPie() {
   const point = result.series[idx];
   const groups = stats.groups; // richest first; carries each group's growthMultiple
   const ratio = result.series[0].total > 0 ? point.total / result.series[0].total : 1;
-  const outerTarget = clamp(BASE_R * Math.sqrt(ratio), BASE_R, MAX_OUTER);
+  // Radius grows with log(total): a steady, continuous expansion that keeps going
+  // as the economy compounds to large multiples, instead of saturating near 5×.
+  const outerTarget = clamp(BASE_R + GROWTH_SCALE * Math.log(ratio), BASE_R, MAX_OUTER);
 
   const rMV = useSpring(outerTarget, SPRING);
   useEffect(() => {
@@ -152,10 +160,10 @@ export function GrowingPie() {
   const a11y = t('pie.a11y', {
     year: selectedYear,
     multiple: formatMultiple(stats.economyMultiple),
-    top1: formatPercent(shareByKey('top1')),
-    next9: formatPercent(shareByKey('next9')),
-    middle40: formatPercent(shareByKey('middle40')),
-    bottom50: formatPercent(shareByKey('bottom50')),
+    top1: formatShare(shareByKey('top1')),
+    next9: formatShare(shareByKey('next9')),
+    middle40: formatShare(shareByKey('middle40')),
+    bottom50: formatShare(shareByKey('bottom50')),
     top1x: formatMultiple(multByKey('top1')),
     next9x: formatMultiple(multByKey('next9')),
     middle40x: formatMultiple(multByKey('middle40')),

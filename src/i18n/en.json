@@ -2,8 +2,7 @@
   "app": {
     "title": "Inequalculator",
     "tagline": "How asset returns above the growth of the economy shape wealth over time",
-    "intro": "The economy grows for everyone — but assets tend to compound faster than wages. Explore who ends up owning the growth.",
-    "rgLine": "This is the mechanism economists call r > g: when the return on assets (r) outpaces the growth of the overall economy (g), wealth concentrates."
+    "intro": "The economy grows for everyone — but assets tend to compound faster than wages. Explore who ends up owning the growth."
   },
   "header": {
     "about": "About & sources",
@@ -37,9 +36,9 @@
     "top10": "Top 10%"
   },
   "controls": {
-    "assetReturn": "Asset return (r)",
+    "assetReturn": "Asset return",
     "assetReturnHelp": "The real, inflation-adjusted return the top group earns on its assets each year. Higher-wealth groups earn a share of this; the bottom 50% grows with the economy. Historically, broad stock markets have returned roughly 5–7% real.",
-    "economyGrowth": "Economy growth (g)",
+    "economyGrowth": "Economy growth",
     "economyGrowthHelp": "The real growth rate of the wider economy each year — the return applied to the bottom 50%. This moves the tail end of the lines up or down.",
     "year": "Year",
     "yearHelp": "Scrub through time, or press play to watch wealth compound from year 0 to the horizon.",
@@ -50,10 +49,6 @@
     "reset": "Reset to preset",
     "resetAria": "Reset all values to the selected country preset",
     "yearOf": "Year {{year}} of {{total}}"
-  },
-  "units": {
-    "years_one": "{{count}} year",
-    "years_other": "{{count}} years"
   },
   "stats": {
     "top1Share": "Top 1% wealth share",
@@ -71,9 +66,12 @@
     "householdsTaxedSubFlat": "The whole taxed group"
   },
   "readout": {
-    "start": "At the start, the top 1% owns {{top1}} and the top 10% owns {{top10}} of all wealth.",
-    "main": "Everyone is {{multiple}} richer than year 0 — but the top 1% now owns {{top1}} and the top 10% owns {{top10}}.",
-    "note": "Both groups are richer in absolute terms. What changes is who owns the growth."
+    "start": "This is how wealth is split today: the top 1% owns {{top1}}, the bottom half {{bottom50}}. Press play, or drag the year, to watch the two pull apart.",
+    "main": "The economy is {{multiple}} its year-0 size, and every group holds more than at the start — even the bottom half is {{bottom50x}} as wealthy as it was. But the shares are what shifted: the top 1% went from {{top1Start}} to {{top1Now}}, the bottom half from {{bottom50Start}} to {{bottom50Now}}.",
+    "mainBalanced": "The economy is {{multiple}} its year-0 size, and every group holds more than at the start — even the bottom half is {{bottom50x}} as wealthy as it was. And because assets and the economy grew at the same pace, the shares held: the top 1% is still {{top1Now}}, the bottom half still {{bottom50Now}}.",
+    "noteConcentrating": "More money, a smaller slice. And because the things households save for — a home, land, a stake in businesses — are priced against total wealth, a shrinking share means they drift further out of reach, even as your savings grow.",
+    "noteEqualizing": "When the broad economy grows faster than top-end assets, the gap narrows instead: everyday households gain ground and claim a growing share of total wealth over time.",
+    "noteBalanced": "When assets and the wider economy grow at the same pace, the split holds: everyone gets richer together and each group keeps the same share of the whole."
   },
   "pie": {
     "title": "Who owns the wealth",
@@ -149,8 +147,6 @@
     "shareNext9": "Next 9% share",
     "shareBottom50": "Bottom 50% share",
     "shareMiddle40": "Middle 40% (remainder)",
-    "timeHorizon": "Time horizon",
-    "timeHorizonHelp": "How many years to project forward.",
     "returnsNote": "Assumption: higher-wealth groups earn higher real returns — the top 1% earns the asset return r, the bottom 50% the economy rate g, the others in between (Fagereng et al. 2020).",
     "done": "Done"
   },
@@ -166,7 +162,7 @@
     },
     "rates": {
       "title": "Move the two rates",
-      "body": "Asset return (r) is what the top earns; economy growth (g) is the bottom 50%. When r beats g, wealth concentrates."
+      "body": "Asset return is what the top earns on its wealth; economy growth is what the bottom 50% gets. When assets grow faster than the economy, wealth concentrates at the top."
     },
     "year": {
       "title": "Travel through time",
@@ -181,8 +177,8 @@
     },
     "modelHeading": "What this model is",
     "modelBody": "Inequalculator is a stylized compounding model. It splits the population into four groups — the top 1%, the next 9%, the middle 40% and the bottom 50% — and compounds each group's wealth forward one year at a time using real, inflation-adjusted returns. It is an illustration of one mechanism, not a forecast of any country's future.",
-    "rgHeading": "r > g, in plain language",
-    "rgBody": "If the money you already own grows faster than the wages and output of the economy as a whole, then — all else equal — the people who own the most assets capture a growing share of total wealth over time. Thomas Piketty summarized this as r > g: the return on capital (r) exceeding the growth rate of the economy (g).",
+    "rgHeading": "When assets outgrow the economy",
+    "rgBody": "If the money you already own grows faster than the wages and output of the economy as a whole, then — all else equal — the people who own the most assets capture a growing share of total wealth over time. Thomas Piketty put this mechanism at the center of his work: when the return on the assets people already hold outpaces the growth of the wider economy, wealth concentrates.",
     "returnsHeading": "Why the groups earn different returns",
     "returnsBody": "Wealthier households have historically earned higher real returns (more equities and business equity, less cash, cheaper leverage). The model reflects this with a gradient: the bottom 50% grows at the economy rate g, the top 1% at the asset rate r, and the middle groups in between. This is what makes the very top pull away from the merely rich.",
     "paretoHeading": "How threshold taxes are modeled",
