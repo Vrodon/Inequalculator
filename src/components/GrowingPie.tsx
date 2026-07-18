@@ -11,11 +11,12 @@ import { GroupLegend } from './primitives/GroupLegend';
 
 const VIEW = 320;
 const CENTER = VIEW / 2;
-const MAX_OUTER = 140;
+const MAX_OUTER = 150;
 const BASE_R = 58;
 // The donut reaches MAX_OUTER at this total-wealth multiple; beyond it the radius
-// holds. Set high so the donut keeps visibly growing through 10×, 20×, 50×.
-const CAP_MULTIPLE = 80;
+// holds. Tuned low enough that mid-range growth (e.g. ~13× on the US default)
+// reads as a big, obvious jump in size — not just "a little larger".
+const CAP_MULTIPLE = 20;
 const GROWTH_SCALE = (MAX_OUTER - BASE_R) / Math.log(CAP_MULTIPLE);
 const INNER_RATIO = 0.6;
 const TAU = Math.PI * 2;
